@@ -46,7 +46,7 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             %根据取定的所有参数进行初始化
             
             %定向
-            InitializeDir(obj,p)
+            ELEMENT_EULERBEAM.InitializeDir(obj,p)
             
             %杆端释放信息
             obj.endrelease=endrelease;
@@ -115,14 +115,7 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             obj.Kel_=Kel_;%保存局部坐标单刚
             
             
-            %计算有效自由度
-            dg=diag(Kel_);
-            tmp=dg(1:6);
-            tmp=abs(tmp)>1e-10;
-            obj.hitbyele(1,tmp)=obj.hitbyele(1,tmp)+1;
-            tmp=dg(7:12);
-            tmp=abs(tmp)>1e-10;
-            obj.hitbyele(2,tmp)=obj.hitbyele(2,tmp)+1;
+            
             
             %计算从局部坐标到总体坐标的转换矩阵C 3*3
             xd=[1 0 0];yd=[0 1 0];zd=[0 0 1];%总体坐标
@@ -136,6 +129,16 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
            %得到总体坐标下的单刚
            Kel=C^-1*Kel_*C;
            obj.Kel=Kel;
+           
+           %计算有效自由度
+            dg=diag(Kel);
+            tmp=dg(1:6);
+            tmp=abs(tmp)>1e-10;
+            obj.hitbyele(1,tmp)=obj.hitbyele(1,tmp)+1;
+            tmp=dg(7:12);
+            tmp=abs(tmp)>1e-10;
+            obj.hitbyele(2,tmp)=obj.hitbyele(2,tmp)+1;
+            
         end
         function K=FormK(obj,K)
             obj.GetKel();%先计算单刚矩阵 总体坐标
@@ -169,8 +172,8 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             force=[tmp(1:6)';tmp(7:12)'];%转化为n*6形式
         end
     end
-    methods(Access=private)
-        function InitializeDir(obj,p)%初始化xdir ydir zdir三个向量
+    methods(Static)
+        function InitializeDir(obj,p)%初始化xdir ydir zdir三个向量 此函数的作用时给具有方向的单元（梁 连接单元）一个默认的方向
             if isempty(p)%不指定zdir定向向量p
                 obj.xdir=obj.f.node.DirBy2Node(obj.nds(1),obj.nds(2));
                 if isequal([0 0 1],obj.xdir)%x向为竖向

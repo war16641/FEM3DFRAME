@@ -529,3 +529,59 @@ lc.Solve();
 testcase.verifyTrue(norm(lc.rst.Get('node','displ',2,1)-0.2262)<0.01,'验证错误');
 testcase.verifyTrue(norm(lc.rst.Get('node','displ',3,1)-0.9524)<0.01,'验证错误');
 end
+function test_verifymodel_15(testcase)
+%验证模型15 验证杆端释放
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,1.2);
+f.node.AddByCartesian(3,0,0,3);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[0 -1 0],'j');%指定z方向为
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_EULERBEAM(f,0,[2 3],sec,[0 -1 0],'i');%指定z方向为 
+f.manager_ele.Add(tmp);
+lc=LoadCase_Static(f,'dead');
+f.manager_lc.Add(lc);
+
+
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+lc.AddBC('displ',[3 1 0;3 2 0;3 3 0;3 4 0;3 5 0;3 6 0;]);
+lc.AddBC('force',[2 2 1;]);
+
+lc.Solve();
+
+testcase.verifyTrue(norm(lc.rst.Get('node','displ',2,'uy')-0.1335)<0.01,'验证错误');
+end
+function test_verifymodel_16(testcase)
+%验证模型16 验证spring单元
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,1.2);
+f.node.AddByCartesian(3,1,0,0);
+f.node.AddByCartesian(4,1,0,1.2);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,1e5);
+f.manager_sec.Add(sec);
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[0 1 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_EULERBEAM(f,0,[3 4],sec,[1 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[2 4],[1.15 0.8 0 0 0 0]);
+f.manager_ele.Add(tmp);
+
+lc=LoadCase_Static(f,'dead');
+f.manager_lc.Add(lc);
+
+
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+lc.AddBC('displ',[3 1 0;3 2 0;3 3 0;3 4 0;3 5 0;3 6 0;]);
+lc.AddBC('force',[2 2 1;2 1 1]);
+
+lc.Solve();
+d4=[0.021828	0.01656	-7.874E-18	-0.0207	0.027285	0];
+testcase.verifyTrue(norm(lc.rst.Get('node','displ',4,'all')-d4)<0.001,'验证错误');
+end

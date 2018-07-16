@@ -84,7 +84,7 @@ classdef NODE<handle
                 case 5
                     label='ry';index=5;
                  case 0
-                    label='rz';index=6;
+                    label='rz';index=6;yushu=6;
             end
             
             %¼ÆËãid
