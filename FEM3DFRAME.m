@@ -8,6 +8,7 @@ classdef FEM3DFRAME <handle
         manager_mat %材料管理器
         manager_sec %截面管理器
         manager_ele %单元管理器
+        bc BC%边界条件
 
 
         
@@ -22,7 +23,7 @@ classdef FEM3DFRAME <handle
             obj.manager_mat=HCM.HANDLE_CLASS_MANAGER_UNIQUE_SORTED('MATERIAL','name');
             obj.manager_sec=HCM.HANDLE_CLASS_MANAGER_UNIQUE_SORTED('SECTION','name');
             obj.manager_ele=ELEMENT_MANAGER('ELEMENT3DFRAME','id');
-
+            obj.bc=BC(obj);
         end
         
 
@@ -79,19 +80,19 @@ classdef FEM3DFRAME <handle
         end
 
         function K=GetK(obj)
-            %K是总刚度矩阵(边界条件处理前) 阶数为2*节点个数
+            %K是总刚度矩阵(边界条件处理前) 阶数为6*节点个数
             
             %形成节点与刚度矩阵的映射
-            obj.node.nds_mapping=zeros(2*obj.node.ndnum,2);
-            lastx=-1;
+            obj.node.nds_mapping=zeros(6*obj.node.ndnum,2);
+            lastx=-5;
             for it=1:obj.node.ndnum
                 obj.node.nds_mapping(it,1)=obj.node.nds(it,1);
-                lastx=lastx+2;
+                lastx=lastx+6;
                 obj.node.nds_mapping(it,2)=lastx;
             end
             
             
-            K=zeros(2*obj.node.ndnum,2*obj.node.ndnum);
+            K=zeros(6*obj.node.ndnum,6*obj.node.ndnum);
             f=waitbar(0,'组装刚度矩阵','Name','FEM2D');
             for it=1:obj.element.elenum
                 waitbar(it/obj.element.elenum,f,['组装刚度矩阵' num2str(it) '/' num2str(obj.element.elenum)]);

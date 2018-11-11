@@ -6,7 +6,7 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
         id double%单元编号
         nds%存储有限元中的节点号 
         ndcoor%存储节点坐标
-        
+        Kel double%单刚矩阵 总体坐标下
         arg%计算中间量
     end
     

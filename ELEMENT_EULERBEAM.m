@@ -83,8 +83,18 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                 0         0           0          0          0         0           0          0          0           0      4*E*Iy/L       0
                 0         0           0          0          0         0           0          0          0           0        0           4*E*Iz/L];
             Kel_=MakeSymmetricMatrix(Kel_);%对称阵
-            Kel=Kel_;
             
+            %计算从局部坐标到总体坐标的转换矩阵C 3*3
+            xd=[1 0 0];yd=[0 1 0];zd=[0 0 1];%总体坐标
+            C=[dot(obj.xdir,xd)      dot(obj.xdir,yd)      dot(obj.xdir,zd)
+               dot(obj.ydir,xd)      dot(obj.ydir,yd)      dot(obj.ydir,zd)
+               dot(obj.zdir,xd)      dot(obj.zdir,yd)      dot(obj.zdir,zd)];
+           C=[C zeros(3,3);zeros(3,3) C];
+           C=[C zeros(6,6);zeros(6,6) C];%扩充到12自由度
+           
+           %得到总体坐标下的单刚
+           Kel=C*Kel_*C^-1;
+           obj.Kel=Kel;
         end
         function K=FormK(obj,K)
             K=K+1;
