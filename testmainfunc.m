@@ -116,6 +116,9 @@ f.manager_ele.Add(tmp);
 testcase.verifyTrue((4==f.manager_ele.num)&&(11==f.manager_ele.maxnum),'添加单元错误');
 tmp=ELEMENT_EULERBEAM(f,0,[1 11],sec);
 f.manager_ele.Add(tmp);
+
+
+
 %验证方向向量
 f.node.AddByCartesian(100,0,0,0);
 f.node.AddByCartesian(101,1,0,1);

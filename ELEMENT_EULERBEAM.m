@@ -14,7 +14,10 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             obj=obj@ELEMENT3DFRAME(varargin{1},varargin{2},varargin{3});
             
             %检查截面是否存在
-            if isempty(obj.f.manager_sec.GetByIdentifier(varargin{4}.name))%这里只通过标识符查找 可以改进成根据对象是否完全一致
+%             if isempty(obj.f.manager_sec.GetByIdentifier(varargin{4}.name))%这里只通过标识符查找 可以改进成根据对象是否完全一致
+%                 error('MATLAB:myerror','没有这个截面')
+%             end
+            if ~obj.f.manager_sec.IsExist(varargin{4})
                 error('MATLAB:myerror','没有这个截面')
             end
             
