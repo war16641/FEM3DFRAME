@@ -374,3 +374,53 @@ f.Solve();
 r=[24.008755	0	2.007E-16	6.022E-17	0	-5.818011];
 testcase.verifyTrue(norm(f.node.nds_displ(3,2:7)-r)<0.01,'验证错误');
 end
+function test_verifymodel_11(testcase)%有问题
+%验证模型11 验证杆端释放
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1.2,0,0);
+f.node.AddByCartesian(3,3,0,0);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[0 -1 0],'j');%指定z方向为
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_EULERBEAM(f,0,[2 3],sec,[0 -1 0],'i');%指定z方向为
+f.manager_ele.Add(tmp);
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+f.bc.Add('displ',[3 1 0;3 2 0;3 3 0;3 4 0;3 5 0;3 6 0;]);
+f.bc.Add('force',[2 2 1;]);
+
+f.Solve();
+
+testcase.verifyTrue(norm(f.node.nds_displ(2,3)-0.1335)<0.01,'验证错误');
+end
+function test_verifymodel_12(testcase)%有问题
+%验证模型12 验证杆端释放
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,1.3);
+f.node.AddByCartesian(3,3,0,1.3);
+f.node.AddByCartesian(4,3,0,0);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[0 -1 0],'j');%指定z方向为
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_EULERBEAM(f,0,[2 3],sec,[0 -1 0],'ij');%指定z方向为
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_EULERBEAM(f,0,[3 4],sec,[0 -1 0]);%指定z方向为
+f.manager_ele.Add(tmp);
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+f.bc.Add('displ',[4 1 0;4 2 0;4 3 0;4 4 0;4 5 0;4 6 0;]);
+f.bc.Add('force',[2 1 1;]);
+
+f.Solve();
+
+testcase.verifyTrue(norm(f.node.nds_displ(2,2)-0.1683)<0.01,'验证错误');
+testcase.verifyTrue(norm(f.node.nds_displ(3,2)-0.0103)<0.01,'验证错误');
+end
