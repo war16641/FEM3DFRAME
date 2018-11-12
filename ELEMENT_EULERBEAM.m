@@ -93,11 +93,23 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
            C=[C zeros(6,6);zeros(6,6) C];%扩充到12自由度
            
            %得到总体坐标下的单刚
-           Kel=C*Kel_*C^-1;
+           Kel=C^-1*Kel_*C;
            obj.Kel=Kel;
         end
         function K=FormK(obj,K)
-            K=K+1;
+            obj.GetKel();%先计算单刚矩阵 总体坐标
+            
+            %将Kel拆为6*6的子矩阵送入总刚K
+            n=length(obj.nds);
+            for it1=1:n
+                for it2=1:n
+                    x=obj.nds(it1);
+                    y=obj.nds(it2);
+                    xuhao1=obj.f.node.GetXuhaoByID(x);%得到 节点号对应于刚度矩阵的序号
+                    xuhao2=obj.f.node.GetXuhaoByID(y);
+                    K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)=K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)+obj.Kel(6*it1-5:6*it1,6*it2-5:6*it2);
+                end
+            end
         end
     end
 

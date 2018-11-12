@@ -131,9 +131,36 @@ testcase.verifyTrue(norm(f.manager_ele.objects(end).zdir-[0 1 0])<1e-10,'Ìí¼Óµ¥Ô
 
 
 end
+function test_verifymodel1(testcase)
+%ÑéÖ¤Ä£ÐÍ1 µ¥¿çÁº 2½Úµã
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1.14,0,1);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+%ÊµÀý»¯´øÓÐ´íÎó½ÚµãµÄµ¥Ôª
+testcase.verifyError(@()ELEMENT_EULERBEAM(f,0,[1001 1002],sec,[0 -1 0]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[0 -1 0]);%Ö¸¶¨z·½ÏòÎª-y·½Ïò
+f.manager_ele.Add(tmp);
+%ÉèÖÃ´íÎóµÄ½Úµã±ß½çÌõ¼þ ½Úµã²»´æÔÚ
+testcase.verifyError(@()f.bc.Add('displ',[1001 1 0;1001 2 0;1001 3 0;1001 4 0;1001 5 0;1001 6 0;]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('displ',[2 1 1;2 2 1;2 3 0;2 4 0;2 5 0;2 6 0;]);%¶ÔÓÒ½ÚµãÊ©¼ÓÖáÏòÎ»ÒÆ uyÎ»ÒÆ
+
+f.Solve();
+rea1=[-6.55	-10.67	6.63	5.33	-7.05	-6.08];
+rea2=[6.55	10.67	-6.63	5.33	-7.05	-6.08];%Ö§·´Á¦µÄÀíÂÛ½âsap2000µÃµ½µÄ
+testcase.verifyTrue(norm(f.node.nds_force(1,2:7)-rea1)<0.01,'ÑéÖ¤´íÎó');
+testcase.verifyTrue(norm(f.node.nds_force(2,2:7)-rea2)<0.01,'ÑéÖ¤´íÎó');
+end
+
 
 function test_verifymodel2(testcase)
-%ÑéÖ¤Ä£ÐÍ2
+%ÑéÖ¤Ä£ÐÍ2 µ¥¿çÁº 2½Úµã
 f=FEM3DFRAME();
 f.node.AddByCartesian(1001,0,0,0);
 f.node.AddByCartesian(1002,1.14,0,0);
@@ -141,6 +168,209 @@ f.manager_mat.Add(1,0.2,1,'concrete');
 mat=f.manager_mat.GetByIdentifier('concrete');
 sec=SECTION('ver',mat,1.1,3.1,4.1,13);
 f.manager_sec.Add(sec);
-tmp=ELEMENT_EULERBEAM(f,0,[1001 1002],sec);
-tmp.GetKel()
+tmp=ELEMENT_EULERBEAM(f,0,[1001 1002],sec,[0 -1 0]);%Ö¸¶¨z·½ÏòÎª-y·½Ïò
+f.manager_ele.Add(tmp);
+f.bc.Add('displ',[1001 1 0;1001 2 0;1001 3 0;1001 4 0;1001 5 0;1001 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('displ',[1002 1 1;1002 2 1;1002 3 0;1002 4 0;1002 5 0; 1002 6 0;]);%¶ÔÓÒ½ÚµãÊ©¼ÓÖáÏòÎ»ÒÆ uyÎ»ÒÆ
+f.Solve();
+rea1=[-0.96 -25.11 0  0  0 -14.31 ];
+rea2=[0.96 25.11 0  0  0 -14.31 ];%Ö§·´Á¦µÄÀíÂÛ½âsap2000µÃµ½µÄ
+testcase.verifyTrue(norm(f.node.nds_force(1,2:7)-rea1)<0.01,'ÑéÖ¤´íÎó');
+testcase.verifyTrue(norm(f.node.nds_force(2,2:7)-rea2)<0.01,'ÑéÖ¤´íÎó');
+end
+function test_verifymodel3(testcase)
+%ÑéÖ¤Ä£ÐÍ3 ÔÚ1µÄÄ£ÐÍ»ù´¡ÉÏ½«z·½Ïò¸ÄÎªzÏò
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1.14,0,1);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+%ÊµÀý»¯´øÓÐ´íÎó½ÚµãµÄµ¥Ôª
+testcase.verifyError(@()ELEMENT_EULERBEAM(f,0,[1001 1002],sec,[0 -1 0]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec);%Ö¸¶¨z·½ÏòÎªz·½Ïò
+f.manager_ele.Add(tmp);
+%ÉèÖÃ´íÎóµÄ½Úµã±ß½çÌõ¼þ ½Úµã²»´æÔÚ
+testcase.verifyError(@()f.bc.Add('displ',[1001 1 0;1001 2 0;1001 3 0;1001 4 0;1001 5 0;1001 6 0;]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('displ',[2 1 1;2 2 1;2 3 0;2 4 0;2 5 0;2 6 0;]);%¶ÔÓÒ½ÚµãÊ©¼ÓÖáÏòÎ»ÒÆ uyÎ»ÒÆ
+
+f.Solve();
+rea1=[-5.05	-14.11	4.93	7.05	-5.33	-8.04];
+rea2=[5.05	14.11	-4.93	7.05	-5.33	-8.04];%Ö§·´Á¦µÄÀíÂÛ½âsap2000µÃµ½µÄ
+testcase.verifyTrue(norm(f.node.nds_force(1,2:7)-rea1)<0.01,'ÑéÖ¤´íÎó');
+testcase.verifyTrue(norm(f.node.nds_force(2,2:7)-rea2)<0.01,'ÑéÖ¤´íÎó');
+end
+function test_verifymodel4(testcase)
+%ÑéÖ¤Ä£ÐÍ4 ÔÚ3µÄÄ£ÐÍ ºÉÔØ¸ÄÎªj½ÚµãËùÓÐÎ»ÒÆÎª1
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1.14,0,1);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+%ÊµÀý»¯´øÓÐ´íÎó½ÚµãµÄµ¥Ôª
+testcase.verifyError(@()ELEMENT_EULERBEAM(f,0,[1001 1002],sec,[0 -1 0]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec);%Ö¸¶¨z·½ÏòÎªz·½Ïò
+f.manager_ele.Add(tmp);
+%ÉèÖÃ´íÎóµÄ½Úµã±ß½çÌõ¼þ ½Úµã²»´æÔÚ
+testcase.verifyError(@()f.bc.Add('displ',[1001 1 0;1001 2 0;1001 3 0;1001 4 0;1001 5 0;1001 6 0;]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('displ',[2 1 1;2 2 1;2 3 1;2 4 1;2 5 1;2 6 1;]);%¶ÔÓÒ½ÚµãÊ©¼ÓÖáÏòÎ»ÒÆ uyÎ»ÒÆ
+
+f.Solve();
+rea1=[5.21	-13.12	-7.5	2.94	4.84	-10.99];
+rea2=[-5.21	13.12	7.5	10.19	8.92	-3.97];%Ö§·´Á¦µÄÀíÂÛ½âsap2000µÃµ½µÄ
+testcase.verifyTrue(norm(f.node.nds_force(1,2:7)-rea1)<0.01,'ÑéÖ¤´íÎó');
+testcase.verifyTrue(norm(f.node.nds_force(2,2:7)-rea2)<0.01,'ÑéÖ¤´íÎó');
+end
+function test_verifymodel5(testcase)
+%ÑéÖ¤Ä£ÐÍ5 ÔÚ3µÄÄ£ÐÍ ºÉÔØ¸ÄÎªj½ÚµãËùÓÐÁ¦Îª1
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1.14,0,1);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+%ÊµÀý»¯´øÓÐ´íÎó½ÚµãµÄµ¥Ôª
+testcase.verifyError(@()ELEMENT_EULERBEAM(f,0,[1001 1002],sec,[0 -1 0]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec);%Ö¸¶¨z·½ÏòÎªz·½Ïò
+f.manager_ele.Add(tmp);
+%ÉèÖÃ´íÎóµÄ½Úµã±ß½çÌõ¼þ ½Úµã²»´æÔÚ
+testcase.verifyError(@()f.bc.Add('displ',[1001 1 0;1001 2 0;1001 3 0;1001 4 0;1001 5 0;1001 6 0;]),'MATLAB:myerror','ÑéÖ¤´íÎó');
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('force',[2 1 1;2 2 1;2 3 1;2 4 1;2 5 1;2 6 1;]);%¶ÔÓÒ½ÚµãÊ©¼ÓÖáÏòÎ»ÒÆ uyÎ»ÒÆ
+
+f.Solve();
+rea1=[-1	-1	-1	0	-0.86	-2.14];%Ö§·´Á¦µÄÀíÂÛ½âsap2000µÃµ½µÄ
+testcase.verifyTrue(norm(f.node.nds_force(1,2:7)-rea1)<0.01,'ÑéÖ¤´íÎó');
+displ2=[1.684273	0.309404	1.030101	0.089553	0.454933	0.497021];
+testcase.verifyTrue(norm(f.node.nds_displ(2,2:7)-displ2)<0.01,'ÑéÖ¤´íÎó');
+testcase.verifyTrue(norm(f.node.nds_displ(1,2:7))<0.0001,'ÑéÖ¤´íÎó');
+end
+function test_verifymodel6(testcase)
+%ÑéÖ¤Ä£ÐÍ6 µ¥¿çÄ£ÐÍ µ¥¿çÁº 2½Úµã j×ø±ê1 2 0 ½ØÃæ·½Ïòx
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1,2,0);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[1 0 0]);%Ö¸¶¨z·½ÏòÎª
+f.manager_ele.Add(tmp);
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('displ',[2 1 1;2 2 0;2 3 0;2 4 0;2 5 0;2 6 0;]);%¶ÔÓÒ½ÚµãÊ©¼Ó
+
+f.Solve();
+rea1=[-2.76	1.13	0	0	0	3.33];
+rea2=[2.76	-1.13	0	0	0	3.33];%Ö§·´Á¦µÄÀíÂÛ½âsap2000µÃµ½µÄ
+testcase.verifyTrue(norm(f.node.nds_force(1,2:7)-rea1)<0.01,'ÑéÖ¤´íÎó');
+testcase.verifyTrue(norm(f.node.nds_force(2,2:7)-rea2)<0.01,'ÑéÖ¤´íÎó');
+end
+function test_verifymodel7(testcase)
+%ÑéÖ¤Ä£ÐÍ7 ÔÚÄ£ÐÍ6µÄ»ù´¡ÉÏÊ©¼ÓËùÓÐÎ»ÒÆ1ºÉÔØ
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1,2,0);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[1 0 0]);%Ö¸¶¨z·½ÏòÎª
+f.manager_ele.Add(tmp);
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('displ',[2 1 1;2 2 1;2 3 1;2 4 1;2 5 1;2 6 1;]);%¶ÔÓÒ½ÚµãÊ©¼Ó
+
+f.Solve();
+
+
+
+rea1=[-4.95	1.74	-2.2	-4.39	-1.44	4.44];
+rea2=[4.95	-1.74	2.2	-0.01342	3.64	7.21];%Ö§·´Á¦µÄÀíÂÛ½âsap2000µÃµ½µÄ
+testcase.verifyTrue(norm(f.node.nds_force(1,2:7)-rea1)<0.01,'ÑéÖ¤´íÎó');
+testcase.verifyTrue(norm(f.node.nds_force(2,2:7)-rea2)<0.01,'ÑéÖ¤´íÎó');
+end
+function test_verifymodel8(testcase)
+%ÑéÖ¤Ä£ÐÍ8 µ¥¿ç j×ø±ê1 2 3 Î»ÒÆÎªÊúÏò1 ·½ÏòzÏò
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1,2,3);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec);%Ö¸¶¨z·½ÏòÎª
+f.manager_ele.Add(tmp);
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('displ',[2 1 0;2 2 0;2 3 1;2 4 0;2 5 0;2 6 0;]);%¶ÔÓÒ½ÚµãÊ©¼Ó
+
+f.Solve();
+testcase.verifyTrue(norm(f.node.nds_force(2,4)-0.4426)<0.01,'ÑéÖ¤´íÎó');
+
+end
+function test_verifymodel9(testcase)
+%ÑéÖ¤Ä£ÐÍ9 Á½¸öÁº Ò»¸özÏò Ò»¸öyÏò ºÉÔØÎªfx=1 ÔÚÐü±Û¶Ë
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,3);
+f.node.AddByCartesian(3,0,5,3);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[0 -1 0]);%Ö¸¶¨z·½ÏòÎª
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_EULERBEAM(f,0,[2 3],sec);%Ö¸¶¨z·½ÏòÎª
+f.manager_ele.Add(tmp);
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);%¹Ì½Ó×ó½Úµã
+f.bc.Add('force',[3 1 1;]);%¶ÔÓÒ½ÚµãÊ©¼Ó
+
+f.Solve();
+testcase.verifyTrue(norm(f.node.nds_force(1,2)+1)<0.01,'ÑéÖ¤´íÎó');%1½Úµãux·´Á¦
+testcase.verifyTrue(norm(f.node.nds_force(1,6)+3)<0.01,'ÑéÖ¤´íÎó');%1½Úµãry·´Á¦
+r=[26.203877	0	2.007E-16	6.022E-17	1.097561	-5.818011];
+testcase.verifyTrue(norm(f.node.nds_displ(3,2:7)-r)<0.01,'ÑéÖ¤´íÎó');
+end
+function test_verifymodel10(testcase)
+%ÑéÖ¤Ä£ÐÍ10 ÔÚ9µÄ»ù´¡ÉÏ ½«½Úµã2µÄux¹Ì¶¨ ÆäËû²»±ä
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,3);
+f.node.AddByCartesian(3,0,5,3);
+f.manager_mat.Add(1,0.2,1,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+f.manager_sec.Add(sec);
+
+tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec,[0 -1 0]);%Ö¸¶¨z·½ÏòÎª
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_EULERBEAM(f,0,[2 3],sec);%Ö¸¶¨z·½ÏòÎª
+f.manager_ele.Add(tmp);
+
+f.bc.Add('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+f.bc.Add('displ',[2 1 0;]);
+f.bc.Add('force',[3 1 1;]);
+
+f.Solve();
+
+r=[24.008755	0	2.007E-16	6.022E-17	0	-5.818011];
+testcase.verifyTrue(norm(f.node.nds_displ(3,2:7)-r)<0.01,'ÑéÖ¤´íÎó');
 end

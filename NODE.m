@@ -4,8 +4,8 @@ classdef NODE<handle
     properties
         f FEM3DFRAME%隶属于哪一个有限元
         nds double%4列 第一列为id
-        nds_force double%节点力(外界对节点的力) FEM2D.solve操作 第一列是节点编号
-        nds_displ double%节点位移 FEM2D.solve操作 第一列是节点编号
+        nds_force double%节点力(外界对节点的力) FEM.solve操作 第一列是节点编号
+        nds_displ double%节点位移 FEM.solve操作 第一列是节点编号 2~7是位移
         nds_mapping double%节点编号与刚度矩阵的映射 第一列是节点编号 第二列是节点x自由度对应的序号 FEM2D.solve操作
         maxnum%使用的最大编号
         ndnum%节点个数
@@ -59,7 +59,7 @@ classdef NODE<handle
                         return;
                     end
                 end
-                flag=flase;
+                flag=false;
                 return;
             end
             
@@ -132,7 +132,7 @@ classdef NODE<handle
             %% 1
             error('未找到节点');
         end
-        function xuhao=GetXuhaoByID(obj,id)%通过id获得刚度矩阵中的序号
+        function xuhao=GetXuhaoByID(obj,id)%通过id获得刚度矩阵中的序号 该节点ux对于的序号
             %% 如果id直接大于了节点数量倒着搜索
             if id>obj.ndnum
                 for it=obj.ndnum:-1:1

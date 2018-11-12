@@ -83,7 +83,7 @@ classdef FEM3DFRAME <handle
             %K是总刚度矩阵(边界条件处理前) 阶数为6*节点个数
             
             %形成节点与刚度矩阵的映射
-            obj.node.nds_mapping=zeros(6*obj.node.ndnum,2);
+            obj.node.nds_mapping=zeros(obj.node.ndnum,2);
             lastx=-5;
             for it=1:obj.node.ndnum
                 obj.node.nds_mapping(it,1)=obj.node.nds(it,1);
@@ -93,10 +93,10 @@ classdef FEM3DFRAME <handle
             
             
             K=zeros(6*obj.node.ndnum,6*obj.node.ndnum);
-            f=waitbar(0,'组装刚度矩阵','Name','FEM2D');
-            for it=1:obj.element.elenum
-                waitbar(it/obj.element.elenum,f,['组装刚度矩阵' num2str(it) '/' num2str(obj.element.elenum)]);
-                e=obj.element.eles(it);
+            f=waitbar(0,'组装刚度矩阵','Name','FEM3DFRAME');
+            for it=1:obj.manager_ele.num
+                waitbar(it/obj.manager_ele.num,f,['组装刚度矩阵' num2str(it) '/' num2str(obj.manager_ele.num)]);
+                e=obj.manager_ele.objects(it);
                 obj.K=e.FormK(K);
                 K=obj.K;
                 
@@ -143,20 +143,20 @@ classdef FEM3DFRAME <handle
             u(activeindex)=u1;
             f=obj.K*u;
             %把结果保存到node中
-            obj.node.nds_displ=zeros(obj.node.ndnum,3);
+            obj.node.nds_displ=zeros(obj.node.ndnum,7);
             for it=1:obj.node.ndnum
                 id=obj.node.nds(it,1);
                 xuhao=obj.node.GetXuhaoByID(id);
                 obj.node.nds_displ(it,1)=id;
-                obj.node.nds_displ(it,2:3)=[u(xuhao:xuhao+1)]';
+                obj.node.nds_displ(it,2:7)=[u(xuhao:xuhao+5)]';
             end
             
-            obj.node.nds_force=zeros(obj.node.ndnum,3);
+            obj.node.nds_force=zeros(obj.node.ndnum,7);
             for it=1:obj.node.ndnum
                 id=obj.node.nds(it,1);
                 xuhao=obj.node.GetXuhaoByID(id);
                 obj.node.nds_force(it,1)=id;
-                obj.node.nds_force(it,2:3)=[f(xuhao:xuhao+1)]';
+                obj.node.nds_force(it,2:7)=[f(xuhao:xuhao+5)]';
             end
         end
 
