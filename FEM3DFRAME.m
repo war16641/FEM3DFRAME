@@ -8,7 +8,7 @@ classdef FEM3DFRAME <handle
         manager_mat %材料管理器
         manager_sec %截面管理器
         manager_ele %单元管理器
-        bc BC%边界条件
+        manager_lc %工况管理器
 
 
         
@@ -23,7 +23,7 @@ classdef FEM3DFRAME <handle
             obj.manager_mat=HCM.HANDLE_CLASS_MANAGER_UNIQUE_SORTED('MATERIAL','name');
             obj.manager_sec=HCM.HANDLE_CLASS_MANAGER_UNIQUE_SORTED('SECTION','name');
             obj.manager_ele=ELEMENT_MANAGER('ELEMENT3DFRAME','id');
-            obj.bc=BC(obj);
+            obj.manager_lc=HCM.HANDLE_CLASS_MANAGER_UNIQUE('LoadCase','name');
         end
         
 

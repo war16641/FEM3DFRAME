@@ -4,12 +4,12 @@ classdef BC<handle
     properties
         displ double
         force double%约定：force未描述且displ未描述的节点力为0
-        f FEM3DFRAME
+        lc LoadCase
     end
     
     methods
-        function obj = BC(f)
-            obj.f=f;
+        function obj = BC(lc)
+            obj.lc=lc;
             obj.displ=[];
             obj.force=[];
         end
@@ -26,7 +26,7 @@ classdef BC<handle
             end
             
             %输入检查
-            if false==obj.f.node.IsExist(ln(1))
+            if false==obj.lc.f.node.IsExist(ln(1))
                 error('MATLAB:myerror','节点不存在');
             end
             if ~IsIn(ln(2),1:6)
@@ -46,7 +46,7 @@ classdef BC<handle
         end
         function Overwrite(obj,type,ln)%覆盖
             %输入检查
-            if false==obj.f.node.IsExist(ln(1))
+            if false==obj.lc.f.node.IsExist(ln(1))
                 error('MATLAB:myerror','节点不存在');
             end
             if ~IsIn(ln(2),1:6)
@@ -88,7 +88,14 @@ classdef BC<handle
             %要求力和位移边界条件不能重复指定同一个自由度 且各自内部也不能有重复的
             len1=size(obj.displ,1);
             len2=size(obj.force,1);
-            [~,ia,~]=unique([obj.displ(:,[1 2]);obj.force(:,[1 2])],'rows');
+            tmp=[];
+            if len1~=0
+                tmp=obj.displ(:,[1 2]);
+            end
+            if len2~=0
+                tmp=[tmp ;obj.force(:,[1 2])];
+            end
+            [~,ia,~]=unique(tmp,'rows');
             if len1+len2~=length(ia)
                 error('matlab:myerror','边界条件出现重复项')
             end
