@@ -136,7 +136,7 @@ classdef FEM3DFRAME <handle
             tmp=1:dof;
             deadindex=tmp(hit==0);
             %输出未被单元激活的自由度信息
-            if isempty(deadindex)
+            if ~isempty(deadindex)
                 disp('存在未被单元激活的自由度')
             end
             for it=1:length(deadindex)
@@ -147,21 +147,26 @@ classdef FEM3DFRAME <handle
             %位移荷载对应的自由度与未被单元激活的自由度是否重叠 当自由度缺少的单元在边界处时 会出现这种情况
             [~,ia,~]=unique([in deadindex]);
             if ia<length(in)+length(deadindex)
-                warning('位移荷载对应的自由度与未被单元激活的自由度重叠')
+                warning('位移荷载对应的自由度与未被单元激活的自由度重叠。（当自由度缺少的单元在边界处时会出现这种情况，这是正常的，其他是异常的。')
             end
             %删除两种类型未激活的自由度
             activeindex([in deadindex])=[];
             
             %处理力边界条件
-%             BC中的force是不包含0的力 这里需要对BC中力矩阵进行补充
+            index_force=[];%力荷载 击中的自由度序号
             ft=zeros(dof,1);
             for it=1:size(obj.bc.force,1)
-%                 index=2*(obj.bc.force(it,1)-1)+obj.bc.force(it,2);
                 index=obj.node.GetXuhaoByID(obj.bc.force(it,1))+obj.bc.force(it,2)-1;
                 ft(index)=ft(index)+obj.bc.force(it,3);
+                index_force=[index_force index];
             end
-
-            f1=ft+df;%
+            f1=ft+df;
+            
+            %检查力是否加载在未被单元激活的自由度上
+            [~,ia,~]=unique([index_force deadindex]);
+            if length(index_force)+length(deadindex)>length(ia)
+                error('matlab:myerror','力加载在未被单元激活的自由度上')
+            end
             
             %求解
             K1=obj.K(activeindex,activeindex);%简化方程组 去除一部分自由度
