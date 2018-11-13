@@ -7,6 +7,7 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
         nds%存储有限元中的节点号 
         ndcoor%存储节点坐标
         Kel double%单刚矩阵 总体坐标下
+        hitbyele double%自由度是否被单元击中  有些单元的自由度并未激活 如桁架单元 有杆端弯矩释放的梁单元 格式为节点个数*6
         arg%计算中间量
     end
     
@@ -29,6 +30,7 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
             obj.id=id;
             obj.nds=nds;
             obj.ndcoor=[];%在开始计算单元刚度时载入坐标
+
         end
     end
     methods(Abstract)

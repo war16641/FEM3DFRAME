@@ -54,6 +54,9 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
         end
         
         function Kel = GetKel(obj)
+            %初始化有效自由度矩阵'
+            obj.hitbyele=zeros(2,6);
+            
             %一个节点6自由度
             E=obj.sec.mat.E;
             A=obj.sec.A;
@@ -79,22 +82,23 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             Kel_=MakeSymmetricMatrix(Kel_);%对称阵
             
             %按杆端释放信息调整刚度矩阵 %有问题
+            %注意：两个节点的转角不能同时释放
             switch char(obj.endrelease)
                 case ''%不释放
                     index_release=[];%释放的自由度
                     index_reserve=1:12;
                     index_reserve(index_release)=[];%保留的自由度
                 case 'i'%释放i端
-                    index_release=[4 5 6];%释放的自由度
+                    index_release=[4 5 6 ];%释放的自由度
                     index_reserve=1:12;
                     index_reserve(index_release)=[];%保留的自由度
                 case 'j'%释放j端
-                    index_release=[10 11 12];%释放的自由度
+                    index_release=[ 10 11 12];%释放的自由度
                     index_reserve=1:12;
                     index_reserve(index_release)=[];%保留的自由度
                 case 'ij'
-%                     index_release=[4 5 6 10 11 12];%释放的自由度
-                    index_release=[ 5 6  11 12];%释放的自由度
+                    index_release=[4 5 6  11 12];%释放的自由度
+%                     index_release=[ 5 6  11 12];%释放的自由度
                     index_reserve=1:12;
                     index_reserve(index_release)=[];%保留的自由度                    
                 otherwise
@@ -108,6 +112,14 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                 Kel_(index_reserve,index_reserve)=Kel_reserve;
             end
             
+            %计算有效自由度
+            dg=diag(Kel_);
+            tmp=dg(1:6);
+            tmp=abs(tmp)>1e-10;
+            obj.hitbyele(1,tmp)=obj.hitbyele(1,tmp)+1;
+            tmp=dg(7:12);
+            tmp=abs(tmp)>1e-10;
+            obj.hitbyele(2,tmp)=obj.hitbyele(2,tmp)+1;
             
             %计算从局部坐标到总体坐标的转换矩阵C 3*3
             xd=[1 0 0];yd=[0 1 0];zd=[0 0 1];%总体坐标

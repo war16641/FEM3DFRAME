@@ -121,7 +121,36 @@ classdef FEM3DFRAME <handle
                 in=[in index];
             end
             activeindex=1:dof;
-            activeindex(in)=[];
+            
+            %处理未被单元激活自由度
+            hit=zeros(dof,1);%自由度被击中次数
+            
+            for it=1:obj.manager_ele.num
+                e=obj.manager_ele.objects(it);
+                for it1=1:length(e.nds)
+                    xh=obj.node.GetXuhaoByID(e.nds(it1));
+                    hit(xh:xh+5)=hit(xh:xh+5)+e.hitbyele(it1,:)';%hit加1
+                end
+            end
+            %收集未被单元激活的自由度
+            tmp=1:dof;
+            deadindex=tmp(hit==0);
+            %输出未被单元激活的自由度信息
+            if isempty(deadindex)
+                disp('存在未被单元激活的自由度')
+            end
+            for it=1:length(deadindex)
+                [id,~,label]=obj.node.GetIdByXuhao(deadindex(it));
+                disp(['节点' num2str(id) ' ' label]);
+            end
+            
+            %位移荷载对应的自由度与未被单元激活的自由度是否重叠 当自由度缺少的单元在边界处时 会出现这种情况
+            [~,ia,~]=unique([in deadindex]);
+            if ia<length(in)+length(deadindex)
+                warning('位移荷载对应的自由度与未被单元激活的自由度重叠')
+            end
+            %删除两种类型未激活的自由度
+            activeindex([in deadindex])=[];
             
             %处理力边界条件
 %             BC中的force是不包含0的力 这里需要对BC中力矩阵进行补充

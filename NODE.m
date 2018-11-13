@@ -16,7 +16,7 @@ classdef NODE<handle
             obj.f=f;
             obj.maxnum=0;
             obj.ndnum=0;
-            
+
             
         end
         function AddByCartesian(obj,id,x,y,z)
@@ -171,6 +171,35 @@ classdef NODE<handle
             %% 1
             error('未找到节点');
         end
+        function [id,index,label]=GetIdByXuhao(obj,xh)%通过刚度矩阵中的序号获得节点id 
+            %先将xh放到ux上 并计算index和label
+            yushu=mod(xh,6);
+            switch yushu
+                case 1
+                    label='ux';
+                    index=1;
+                case 2
+                    label='uy';index=2;
+                 case 3
+                    label='uz';index=3;
+                case 4
+                    label='rx';index=4;
+                case 5
+                    label='ry';index=5;
+                 case 0
+                    label='rz';index=6;
+            end
+            
+            %计算id
+            xh=xh-yushu+1;%将序号移动到本节点的ux自由度上
+            for it=1:size(obj.nds_mapping,1)%算法可能有待改进
+                if xh==obj.nds_mapping(it,2)
+                    id=obj.nds_mapping(it,1);
+                    return;
+                end
+            end
+            error('matlab:error','未找到')
+        end
         function LoadFromMatrix(obj,mt)%从矩阵中载入 第一列是id 二三是xy %需要更改
             for it=1:size(mt,1)
                 AddByCartesian(obj,mt(it,1),mt(it,2),mt(it,3));
@@ -189,6 +218,7 @@ classdef NODE<handle
             r=xyz2-xyz1;
             d=sqrt(sum(r.^2));
         end
+
     end
     methods(Static)
         
