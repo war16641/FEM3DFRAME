@@ -200,6 +200,17 @@ classdef NODE<handle
             end
             error('matlab:error','未找到')
         end
+        function SetupMapping(obj)%建立节点自由度对刚度矩阵(K)的映射 
+            %这个函数执行应在solve中调用
+            %此函数执行后 不应再对节点进行操作了
+            obj.nds_mapping=zeros(obj.ndnum,2);
+            lastx=-5;
+            for it=1:obj.ndnum
+                obj.nds_mapping(it,1)=obj.nds(it,1);
+                lastx=lastx+6;
+                obj.nds_mapping(it,2)=lastx;
+            end
+        end
         function LoadFromMatrix(obj,mt)%从矩阵中载入 第一列是id 二三是xy %需要更改
             for it=1:size(mt,1)
                 AddByCartesian(obj,mt(it,1),mt(it,2),mt(it,3));

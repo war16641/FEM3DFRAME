@@ -105,13 +105,8 @@ classdef LoadCase_Static<LoadCase
             %K是总刚度矩阵(边界条件处理前) 阶数为6*节点个数
             
             %形成节点与刚度矩阵的映射
-            obj.f.node.nds_mapping=zeros(obj.f.node.ndnum,2);
-            lastx=-5;
-            for it=1:obj.f.node.ndnum
-                obj.f.node.nds_mapping(it,1)=obj.f.node.nds(it,1);
-                lastx=lastx+6;
-                obj.f.node.nds_mapping(it,2)=lastx;
-            end
+            obj.f.node.SetupMapping();
+
             
             
             K=zeros(6*obj.f.node.ndnum,6*obj.f.node.ndnum);
