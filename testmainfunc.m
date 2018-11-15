@@ -9,31 +9,35 @@ f.node.AddByCartesian(0,2,1,1);
 f.node.AddByCartesian(0,3,1,1);
 testcase.verifyTrue(f.node.ndnum==3,'添加节点错误（不指定id)');
 testcase.verifyTrue(f.node.maxnum==3,'添加节点错误（不指定id)');
-testcase.verifyTrue(f.node.nds(end,1)==3,'添加节点错误（不指定id)');
+testcase.verifyTrue(f.node.nds.object{end,1}==3,'添加节点错误（不指定id)');
 
 %指定id 添加
 f.node.AddByCartesian(4,4,1,1);
 testcase.verifyTrue(f.node.ndnum==4,'添加节点错误（指定id)');
 testcase.verifyTrue(f.node.maxnum==4,'添加节点错误（指定id)');
-testcase.verifyTrue(f.node.nds(end,1)==4,'添加节点错误（指定id)');
+testcase.verifyTrue(f.node.nds.object{end,1}==4,'添加节点错误（指定id)');
 
 %不按连续编号添加
 f.node.AddByCartesian(10,10,1,1);
 testcase.verifyTrue(f.node.ndnum==5,'添加节点错误（指定id)');
 testcase.verifyTrue(f.node.maxnum==10,'添加节点错误（指定id)');
-testcase.verifyTrue(f.node.nds(end,1)==10,'添加节点错误（指定id)');
+
+testcase.verifyTrue(f.node.nds.object{end,1}==10,'添加节点错误（指定id)');
 
 %插入一个节点至空白处
 f.node.AddByCartesian(5,5,1,1);
 testcase.verifyTrue(f.node.ndnum==6,'添加节点错误（指定id)');
 testcase.verifyTrue(f.node.maxnum==10,'添加节点错误（指定id)');
-testcase.verifyTrue(f.node.nds(end-1,1)==5,'添加节点错误（指定id)');
+testcase.verifyTrue(f.node.nds.object{end-1,1}==5,'添加节点错误（指定id)');
 
 %插入一个节点至有值处
 f.node.AddByCartesian(5,5,2,1);
 testcase.verifyTrue(f.node.ndnum==6,'添加节点错误（指定id)');
 testcase.verifyTrue(f.node.maxnum==10,'添加节点错误（指定id)');
-testcase.verifyTrue(f.node.nds(end-1,3)==2,'添加节点错误（指定id)');
+tmp=f.node.nds.Get('index',f.node.ndnum-1);
+testcase.verifyTrue(tmp(2)==2,'添加节点错误（指定id)');
+tmp=f.node.nds.Get('index',f.node.ndnum-1);
+testcase.verifyTrue(tmp(2)==2,'添加节点错误（指定id)');
 f.node.AddByCartesian(11,1,1,2);
 
 %添加材料

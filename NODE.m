@@ -3,9 +3,9 @@ classdef NODE<handle
     
     properties
         f FEM3DFRAME%隶属于哪一个有限元
-        nds double%4列 第一列为id
+        nds %由vcm管理 第一列是id 后面三个坐标构成的矩阵
 
-        nds_mapping %节点编号与刚度矩阵的映射 第一列是节点编号 第二列是节点x自由度对应的序号 FEM2D.solve操作
+        nds_mapping %节点编号与刚度矩阵的映射 第一列是节点编号 第二列是节点x自由度对应的序号 
         nds_mapping_r %nds_mapping的反矩阵 第一列是序号 第二列是节点
         maxnum%使用的最大编号
         ndnum%节点个数
@@ -16,122 +16,51 @@ classdef NODE<handle
             obj.f=f;
             obj.maxnum=0;
             obj.ndnum=0;
+            obj.nds=VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED();
             obj.nds_mapping=VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED();
             obj.nds_mapping_r=VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED();
             
         end
         function AddByCartesian(obj,id,x,y,z)
-            %nds始终按照第一列递增
-            if id==0%最大编号加1
-                obj.nds=[obj.nds;obj.maxnum+1 x y z];
-                obj.maxnum=obj.maxnum+1;
-                obj.ndnum=obj.ndnum+1;
+            if 0==id%最大的数加一
+                id=obj.maxnum+1;
+                obj.nds.Append(id,[x y z]);
                 return;
-            else%指定id
-                if id>obj.maxnum%指定的编号大于最大编号
-                    obj.nds=[obj.nds;id x y z];
-                    obj.maxnum=id;
-                    obj.ndnum=obj.ndnum+1;
-                    return;
-                end
-                %指定的编号不大于最大编号
-                %需要插入到表中 插入的算法还可以改进
-                for it=1:obj.ndnum
-                    if id<obj.nds(it,1)
-                        obj.nds=[obj.nds(1:it-1,:);id x y z;obj.nds(it:end,:)];
-                        obj.ndnum=obj.ndnum+1;
-                        return;
-                    elseif obj.nds(it,1)==id
-                        warning(['覆盖节点' num2str(id)]);
-                        obj.nds(it,:)=[id x y z];
-                        return;
-                    end
-                end
-                error('添加节点错误')
             end
+            obj.nds.Add(id,[x y z],1);
+            
+
+        end
+        function v=get.maxnum(obj)
+            if 0==obj.ndnum
+                obj.maxnum=0;
+                v=obj.maxnum;
+                return;
+            end
+            obj.maxnum=obj.nds.object{end,1};
+            v=obj.maxnum;
+        end
+        function v=get.ndnum(obj)
+            obj.ndnum=size(obj.nds.object,1);
+            v=obj.ndnum;
         end
         function flag=IsExist(obj,id)
             %判断某个节点是否存在
-            %% 如果id直接大于了节点数量倒着搜索
-            if id>obj.ndnum
-                for it=obj.ndnum:-1:1
-                    if obj.nds(it,1)==id
-                        flag=true;
-                        return;
-                    end
-                end
+            i=obj.nds.FindId(id);
+            if i==0%没找到
                 flag=false;
                 return;
-            end
-            
-            
-            %% 首先返回id处的坐标 如果符合的话
-            if obj.nds(id,1)==id
+            else
                 flag=true;
                 return;
             end
-            %% 不符合
-            if obj.nds(id,1)>id%如果这里比目标大 向前搜索
-                for it=id-1:-1:1
-                    if obj.nds(it)==id
-                        flag=true;
-                        return;
-                    end
-                end
-                flag=false;
-                return;
-            elseif  obj.nds(id,1)>id%如果这里比目标小 向后搜索
-                for it=id+1:obj.ndnum
-                    if obj.nds(it,1)==id
-                        flag=true;
-                        return;
-                    end
-                end
-                flag=false;
-                return;
-            end
-            %% 1
-            flag=false;
-            return;
         end
         function xyz = GetCartesianByID(obj,id)
-            %% 如果id直接大于了节点数量倒着搜索
-            if id>obj.ndnum
-                for it=obj.ndnum:-1:1
-                    if obj.nds(it,1)==id
-                        xyz=obj.nds(it,[2 3 4]);
-                        return;
-                    end
-                end
+            xyz=obj.nds.Get('id',id);
+            if isempty(xyz)
                 error('未找到节点');
             end
             
-            
-            %% 首先返回id处的坐标 如果符合的话
-            if obj.nds(id,1)==id
-                xyz=obj.nds(id,[2 3 4]);
-                return;
-            end
-            %% 不符合
-            if obj.nds(id,1)>id%如果这里比目标大 向前搜索
-                for it=id-1:-1:1
-                    if obj.nds(it)==id
-                        xyz=obj.nds(it,[2 3 4]);
-                        return;
-                    end
-                end
-                error('未找到节点');
-            elseif  obj.nds(id,1)>id%如果这里比目标小 向后搜索
-                for it=id+1:obj.ndnum
-                    if obj.nds(it,1)==id
-                        xyz=obj.nds(it,[2 3 4]);
-                        return;
-                    end
-                end
-                error('未找到节点');
-            end
-            %% 1
-            error('未找到节点');
         end
         function xuhao=GetXuhaoByID(obj,id)%通过id获得刚度矩阵中的序号 该节点ux对于的序号
           xuhao=obj.nds_mapping.Get('id',id);
@@ -171,8 +100,8 @@ classdef NODE<handle
             lastx=-5;
             for it=1:obj.ndnum
                 lastx=lastx+6;
-                obj.nds_mapping.Append(obj.nds(it,1),lastx);
-                obj.nds_mapping_r.Append(lastx,obj.nds(it,1));
+                obj.nds_mapping.Append(obj.nds.object{it,1},lastx);
+                obj.nds_mapping_r.Append(lastx,obj.nds.object{it,1});
             end
             obj.nds_mapping.Check();
             obj.nds_mapping_r.Check();

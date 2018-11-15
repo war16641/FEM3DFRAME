@@ -91,12 +91,12 @@ classdef LoadCase_Static<LoadCase
             obj.noderst.Reset();
             
             for it=1:obj.f.node.ndnum
-                id=obj.f.node.nds(it,1);
+                [~,id]=obj.f.node.nds.Get('index',it);
                 xuhao=obj.f.node.GetXuhaoByID(id);
                 obj.noderst.SetLine('displ',it,id,u(xuhao:xuhao+5)');
             end
             for it=1:obj.f.node.ndnum
-                id=obj.f.node.nds(it,1);
+                [~,id]=obj.f.node.nds.Get('index',it);
                 xuhao=obj.f.node.GetXuhaoByID(id);
                 obj.noderst.SetLine('force',it,id,f(xuhao:xuhao+5)');
             end
