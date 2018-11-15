@@ -6,8 +6,7 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         f FEM3DFRAME
         name char%工况名
         bc BC
-        noderst NodeResult
-        elerst
+        rst Result
         
         K double%结构刚度矩阵 处理边界条件前
     end
@@ -17,7 +16,7 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
             obj.f=f;
             obj.name=name;
             obj.bc=BC(obj);
-            obj.noderst=NodeResult(obj);
+            obj.rst=Result(obj);
 
         end
         

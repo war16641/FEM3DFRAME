@@ -90,8 +90,10 @@ classdef LoadCase_Static<LoadCase
             
             %把结果保存到noderst
             %static工况只有一个名为static的非时间结果
-            obj.noderst.AddNontime('static',f,u);
+            obj.rst.AddNontime('static',f,u);
             
+            %初始化结果指针
+            obj.rst.SetPointer();
 %             obj.noderst.Reset();
 %             
 %             for it=1:obj.f.node.ndnum
