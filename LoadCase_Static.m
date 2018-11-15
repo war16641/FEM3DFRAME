@@ -37,7 +37,7 @@ classdef LoadCase_Static<LoadCase
             hit=zeros(dof,1);%自由度被击中次数
             
             for it=1:obj.f.manager_ele.num
-                e=obj.f.manager_ele.objects(it);
+                e=obj.f.manager_ele.Get('index',it);
                 for it1=1:length(e.nds)
                     xh=obj.f.node.GetXuhaoByID(e.nds(it1));
                     hit(xh:xh+5)=hit(xh:xh+5)+e.hitbyele(it1,:)';%hit加1
@@ -113,7 +113,7 @@ classdef LoadCase_Static<LoadCase
             f=waitbar(0,'组装刚度矩阵','Name','FEM3DFRAME');
             for it=1:obj.f.manager_ele.num
                 waitbar(it/obj.f.manager_ele.num,f,['组装刚度矩阵' num2str(it) '/' num2str(obj.f.manager_ele.num)]);
-                e=obj.f.manager_ele.objects(it);
+                e=obj.f.manager_ele.Get('index',it);
                 obj.K=e.FormK(K);
                 K=obj.K;
                 

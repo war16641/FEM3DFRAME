@@ -22,7 +22,7 @@ classdef FEM3DFRAME <handle
             obj.node=NODE(obj);
             obj.manager_mat=HCM.HANDLE_CLASS_MANAGER_UNIQUE_SORTED('MATERIAL','name');
             obj.manager_sec=HCM.HANDLE_CLASS_MANAGER_UNIQUE_SORTED('SECTION','name');
-            obj.manager_ele=ELEMENT_MANAGER('ELEMENT3DFRAME','id');
+            obj.manager_ele=ELEMENT_MANAGER();
             obj.manager_lc=HCM.HANDLE_CLASS_MANAGER_UNIQUE('LoadCase','name');
         end
         
@@ -77,121 +77,6 @@ classdef FEM3DFRAME <handle
             end
             
   
-        end
-
-        function K=GetK(obj)
-            %K是总刚度矩阵(边界条件处理前) 阶数为6*节点个数
-            
-            %形成节点与刚度矩阵的映射
-            obj.node.nds_mapping=zeros(obj.node.ndnum,2);
-            lastx=-5;
-            for it=1:obj.node.ndnum
-                obj.node.nds_mapping(it,1)=obj.node.nds(it,1);
-                lastx=lastx+6;
-                obj.node.nds_mapping(it,2)=lastx;
-            end
-            
-            
-            K=zeros(6*obj.node.ndnum,6*obj.node.ndnum);
-            f=waitbar(0,'组装刚度矩阵','Name','FEM3DFRAME');
-            for it=1:obj.manager_ele.num
-                waitbar(it/obj.manager_ele.num,f,['组装刚度矩阵' num2str(it) '/' num2str(obj.manager_ele.num)]);
-                e=obj.manager_ele.objects(it);
-                obj.K=e.FormK(K);
-                K=obj.K;
-                
-            end
-            close(f);
-        end
-        function Solve(obj)%调用此函数前 制定load和setf
-            GetK(obj);
-            %K1为引入边界条件的总刚度矩阵
-            dof=size(obj.K,1);
-            u=zeros(dof,1);
-            
-            %先处理位移边界
-            df=zeros(dof,1);
-            
-            in=[];%存储不激活的自由度 位移限制的自由度
-            for it=1:size(obj.bc.displ,1)
-%                 index=2*(obj.bc.displ(it,1)-1)+obj.bc.displ(it,2);
-                index=obj.node.GetXuhaoByID(obj.bc.displ(it,1))+obj.bc.displ(it,2)-1;%得到序号
-                df=df-obj.K(:,index)*obj.bc.displ(it,3);
-                u(index)=obj.bc.displ(it,3);%保存位移
-                in=[in index];
-            end
-            activeindex=1:dof;
-            
-            %处理未被单元激活自由度
-            hit=zeros(dof,1);%自由度被击中次数
-            
-            for it=1:obj.manager_ele.num
-                e=obj.manager_ele.objects(it);
-                for it1=1:length(e.nds)
-                    xh=obj.node.GetXuhaoByID(e.nds(it1));
-                    hit(xh:xh+5)=hit(xh:xh+5)+e.hitbyele(it1,:)';%hit加1
-                end
-            end
-            %收集未被单元激活的自由度
-            tmp=1:dof;
-            deadindex=tmp(hit==0);
-            %输出未被单元激活的自由度信息
-            if ~isempty(deadindex)
-                disp('存在未被单元激活的自由度')
-            end
-            for it=1:length(deadindex)
-                [id,~,label]=obj.node.GetIdByXuhao(deadindex(it));
-                disp(['节点' num2str(id) ' ' label]);
-            end
-            
-            %位移荷载对应的自由度与未被单元激活的自由度是否重叠 当自由度缺少的单元在边界处时 会出现这种情况
-            [~,ia,~]=unique([in deadindex]);
-            if ia<length(in)+length(deadindex)
-                warning('位移荷载对应的自由度与未被单元激活的自由度重叠。（当自由度缺少的单元在边界处时会出现这种情况，这是正常的，其他是异常的。')
-            end
-            %删除两种类型未激活的自由度
-            activeindex([in deadindex])=[];
-            
-            %处理力边界条件
-            index_force=[];%力荷载 击中的自由度序号
-            ft=zeros(dof,1);
-            for it=1:size(obj.bc.force,1)
-                index=obj.node.GetXuhaoByID(obj.bc.force(it,1))+obj.bc.force(it,2)-1;
-                ft(index)=ft(index)+obj.bc.force(it,3);
-                index_force=[index_force index];
-            end
-            f1=ft+df;
-            
-            %检查力是否加载在未被单元激活的自由度上
-            [~,ia,~]=unique([index_force deadindex]);
-            if length(index_force)+length(deadindex)>length(ia)
-                error('matlab:myerror','力加载在未被单元激活的自由度上')
-            end
-            
-            %求解
-            K1=obj.K(activeindex,activeindex);%简化方程组 去除一部分自由度
-            u1=K1\f1(activeindex);
-            
-            %处理求解后所有自由度上的力和位移
-            
-            u(activeindex)=u1;
-            f=obj.K*u;
-            %把结果保存到node中
-            obj.node.nds_displ=zeros(obj.node.ndnum,7);
-            for it=1:obj.node.ndnum
-                id=obj.node.nds(it,1);
-                xuhao=obj.node.GetXuhaoByID(id);
-                obj.node.nds_displ(it,1)=id;
-                obj.node.nds_displ(it,2:7)=[u(xuhao:xuhao+5)]';
-            end
-            
-            obj.node.nds_force=zeros(obj.node.ndnum,7);
-            for it=1:obj.node.ndnum
-                id=obj.node.nds(it,1);
-                xuhao=obj.node.GetXuhaoByID(id);
-                obj.node.nds_force(it,1)=id;
-                obj.node.nds_force(it,2:7)=[f(xuhao:xuhao+5)]';
-            end
         end
 
 

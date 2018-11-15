@@ -128,10 +128,12 @@ f.node.AddByCartesian(100,0,0,0);
 f.node.AddByCartesian(101,1,0,1);
 tmp=ELEMENT_EULERBEAM(f,0,[100 101],sec);
 f.manager_ele.Add(tmp);
-testcase.verifyTrue(norm(f.manager_ele.objects(end).zdir-[-1/sqrt(2) 0 1/sqrt(2)])<1e-10,'添加单元错误');
+t1=f.manager_ele.Get('index',f.manager_ele.num);
+testcase.verifyTrue(norm(t1.zdir-[-1/sqrt(2) 0 1/sqrt(2)])<1e-10,'添加单元错误');
 tmp=ELEMENT_EULERBEAM(f,0,[100 101],sec,[0 1 0]);
 f.manager_ele.Add(tmp);
-testcase.verifyTrue(norm(f.manager_ele.objects(end).zdir-[0 1 0])<1e-10,'添加单元错误');
+t1=f.manager_ele.Get('index',f.manager_ele.num);
+testcase.verifyTrue(norm(t1.zdir-[0 1 0])<1e-10,'添加单元错误');
 
 
 end
