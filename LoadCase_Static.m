@@ -87,19 +87,23 @@ classdef LoadCase_Static<LoadCase
             
             u(activeindex)=u1;
             f=obj.K*u;
-            %把结果保存到noderst
-            obj.noderst.Reset();
             
-            for it=1:obj.f.node.ndnum
-                [~,id]=obj.f.node.nds.Get('index',it);
-                xuhao=obj.f.node.GetXuhaoByID(id);
-                obj.noderst.SetLine('displ',it,id,u(xuhao:xuhao+5)');
-            end
-            for it=1:obj.f.node.ndnum
-                [~,id]=obj.f.node.nds.Get('index',it);
-                xuhao=obj.f.node.GetXuhaoByID(id);
-                obj.noderst.SetLine('force',it,id,f(xuhao:xuhao+5)');
-            end
+            %把结果保存到noderst
+            %static工况只有一个名为static的非时间结果
+            obj.noderst.AddNontime('static',f,u);
+            
+%             obj.noderst.Reset();
+%             
+%             for it=1:obj.f.node.ndnum
+%                 [~,id]=obj.f.node.nds.Get('index',it);
+%                 xuhao=obj.f.node.GetXuhaoByID(id);
+%                 obj.noderst.SetLine('displ',it,id,u(xuhao:xuhao+5)');
+%             end
+%             for it=1:obj.f.node.ndnum
+%                 [~,id]=obj.f.node.nds.Get('index',it);
+%                 xuhao=obj.f.node.GetXuhaoByID(id);
+%                 obj.noderst.SetLine('force',it,id,f(xuhao:xuhao+5)');
+%             end
         end
         function GetK(obj)
             %K是总刚度矩阵(边界条件处理前) 阶数为6*节点个数
