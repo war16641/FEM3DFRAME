@@ -81,6 +81,7 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                 0         0           0          0          0         0           0          0          0           0        0           4*E*Iz/L];
             Kel_=MakeSymmetricMatrix(Kel_);%对称阵
             
+            
             %按杆端释放信息调整刚度矩阵 %有问题
             %注意：两个节点的转角不能同时释放
             switch char(obj.endrelease)
@@ -111,6 +112,8 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                 Kel_=zeros(12,12);
                 Kel_(index_reserve,index_reserve)=Kel_reserve;
             end
+            obj.Kel_=Kel_;%保存局部坐标单刚
+            
             
             %计算有效自由度
             dg=diag(Kel_);
@@ -127,6 +130,7 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                dot(obj.ydir,xd)      dot(obj.ydir,yd)      dot(obj.ydir,zd)
                dot(obj.zdir,xd)      dot(obj.zdir,yd)      dot(obj.zdir,zd)];
            C=[C zeros(3,3);zeros(3,3) C];
+           obj.C66=C;%保存单节点的转换矩阵
            C=[C zeros(6,6);zeros(6,6) C];%扩充到12自由度
            
            %得到总体坐标下的单刚
@@ -147,6 +151,22 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                     K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)=K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)+obj.Kel(6*it1-5:6*it1,6*it2-5:6*it2);
                 end
             end
+        end
+        function [force,deform]=GetEleResult(obj,varargin)
+            %根据计算结果（节点位移） 计算单元力 变形
+            %varargin 只输入两个节点ij的变形2*6 
+            if length(varargin)~=1
+                error('matlab:myerror','错误格式')
+            end
+            ui=varargin{1}(1,:);
+            uj=varargin{1}(2,:);%两节点位移 总体坐标
+            deform_global=uj-ui;%整体坐标系下的变形
+            cli=obj.C66^-1;
+            deform=deform_global*cli;
+            ui_local=ui*cli;
+            uj_local=uj*cli;%两节点位移 局部坐标
+            tmp=obj.Kel_*[ui_local uj_local]';
+            force=[tmp(1:6)';tmp(7:12)'];%转化为n*6形式
         end
     end
     methods(Access=private)

@@ -407,6 +407,16 @@ lc.Solve();
 
 r=[24.008755	0	2.007E-16	6.022E-17	0	-5.818011];
 testcase.verifyTrue(norm(lc.rst.Get('node','displ',3,'all')-r)<0.01,'验证错误');
+
+%验证单元结果
+ui=lc.rst.Get('node','displ',2,'all');
+uj=lc.rst.Get('node','displ',3,'all');
+e=f.manager_ele.Get('id',2);
+[a,b]=e.GetEleResult([ui;uj]);
+
+lc.rst.Get('ele','deform',1,'all')
+r=lc.rst.Get('ele','force',1,'ij',4)
+testcase.verifyTrue(norm(r-[5 ;-5])<0.001,'验证错误');
 end
 function test_verifymodel_11(testcase)
 %验证模型11 验证杆端释放
@@ -462,6 +472,9 @@ lc.Solve();
 
 testcase.verifyTrue(norm(lc.rst.Get('node','displ',2,'ux')-0.1683)<0.01,'验证错误');
 testcase.verifyTrue(norm(lc.rst.Get('node','displ',3,'ux')-0.0103)<0.01,'验证错误');
+t=lc.rst.Get('ele','force',1,'i','all');
+t=t([2 6]);
+testcase.verifyTrue(norm(t-[0.94 1.22])<0.01,'验证错误');
 end
 function test_verifymodel_13(testcase)
 %验证模型13 未被单元激活的自由度上加力

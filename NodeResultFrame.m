@@ -14,7 +14,9 @@ properties
             obj.displ=VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED();
         end
         function Make(obj,vector_f,vectro_u)%从节点力和节点位移向量中载入数据至force和displ
-            obj.Reset();
+            if obj.force.num~=0||obj.displ.num~=0
+                error('matlab:myerror','计算节点结果时，已有节点结果。')
+            end
             node=obj.rf.rst.lc.f.node;
             for it=1:node.ndnum
                 [~,id]=node.nds.Get('index',it);
@@ -22,38 +24,22 @@ properties
                 obj.displ.Append(id,vectro_u(xuhao:xuhao+5)');
                 obj.force.Append(id,vector_f(xuhao:xuhao+5)');%因为知道节点矩阵是升序的 这里直接append不用add
             end
+            obj.displ.Check();
+            obj.force.Check();
         end
 
 
-        function r=Get(obj,type,id,dir)%读取结果
+        function r=Get(obj,varargin)%读取结果
             %type force或者displ
             %id 节点编号
             %dir 方向可以是 1~6 或者 ux uy uz rx ry rz 或者 [1 3] 或者 'all' 
-            
+            varargin=Hull(varargin);%去除多余的cell壳 
+            type=varargin{1};
+            id=varargin{2};
+            dir=varargin{3};
             %把dir化作数字
-            if isa(dir,'char')
-                switch dir
-                    case 'ux'
-                        dir=1;
-                    case 'uy'
-                        dir=2;
-                    case 'uz'
-                        dir=3;
-                    case 'rx'
-                        dir=4;
-                    case 'ry'
-                        dir=5;
-                    case 'rz'
-                        dir=6;
-                    case 'all'
-                        dir=1:6;
-                    otherwise
-                        error('matlab:myerror','未知自由度')
-                end
-            elseif isa(dir,'double')
-            else
-                error('matlab:myerror','未知自由度')
-            end
+            dir=EleResultFrame.FreedomInterpreter(dir);
+            
             
             %计算
             switch type(1)
@@ -87,12 +73,7 @@ properties
 
     end
     methods(Access=private)
-        function Reset(obj)%初始化force和displ 分配好大小
-            if obj.force.num~=0||obj.displ.num~=0
-                warning('初始化节点结果时，已有节点结果,请确认是否异常。')
-            end
-            
-        end
+
     end
 
 end

@@ -34,12 +34,14 @@ classdef Result<handle
             tmp=ResultFrame(framename,obj,vector_f,vectro_u);
             obj.nontimeframe.Add(framename,tmp);
         end
-        function r = Get(obj,rst_type,type,id,dir)
+        function r = Get(obj,varargin)
+            r=obj.pointer.Get(varargin);
             %rst_type node 或者 ele
             %rst_type='node'    type='force' 'displ'
              %                             id 节点id
              %                             dir 方向
-            r=obj.pointer.Get(rst_type,type,id,dir);
+%             r=obj.pointer.Get(rst_type,type,id,dir);
+
         end
     end
 end
