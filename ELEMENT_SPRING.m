@@ -111,6 +111,12 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
             tmp=obj.Kel_*[ui_local uj_local]';
             force=[tmp(1:6)';tmp(7:12)'];%转化为n*6形式
         end
+        function Mel=GetMel(obj)
+            
+        end
+        function M=FormM(obj,M)
+            %此单元无质量
+        end
     end
 end
 

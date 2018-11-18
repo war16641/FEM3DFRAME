@@ -1,17 +1,18 @@
-classdef LoadCase_Static<LoadCase
-    %UNTITLED3 此处显示有关此类的摘要
-    %   此处显示详细说明
+classdef LoadCase_Modal<LoadCase
+    %自振工况
     
     properties
         
     end
     
     methods
-        function obj = LoadCase_Static(f,name)
+        function obj = LoadCase_Modal(f,name)
             obj=obj@LoadCase(f,name);
+            obj.rst=Result_Modal(obj);%覆盖原有结果对象 改为使用模态专用结果对象
         end
         function Solve(obj)
             obj.GetK();
+            obj.GetM();
             
             %检查边界条件是否重复
             obj.bc.Check();
@@ -80,18 +81,28 @@ classdef LoadCase_Static<LoadCase
                 error('matlab:myerror','力加载在未被单元激活的自由度上')
             end
             
-            %求解
-            K1=obj.K(activeindex,activeindex);%简化方程组 去除一部分自由度
-            u1=K1\f1(activeindex);
+            %形成刚度 质量 矩阵 引入边界条件后
+            K1=obj.K(activeindex,activeindex);%去除一部分自由度
+            M1=obj.M(activeindex,activeindex);
             
-            %处理求解后所有自由度上的力和位移
+            %调用算法求解特征值
+            [w,mode]=LoadCase_Modal.GetInfoForFreeVibration_eig(K1,M1);
             
-            u(activeindex)=u1;
-            f=obj.K*u;
+            %处理求解后所有自由度上的力和位移 保存结果
+            tic
+            for it=1:length(w)%这一块循环有点花时间
+                w1=w(it);
+                mode1=mode(:,it);
+                u1=u;
+                u1(activeindex)=mode1;
+                f1=obj.K*u1;
+                obj.rst.Add(it,w1,f1,u1);
+            end
+            toc
+
             
-            %把结果保存到noderst
-            %static工况只有一个名为static的非时间结果
-            obj.rst.AddNontime('static',f,u);
+
+            
             
             %初始化结果指针
             obj.rst.SetPointer();
@@ -105,16 +116,47 @@ classdef LoadCase_Static<LoadCase
 
             
             
-            K=zeros(6*obj.f.node.ndnum,6*obj.f.node.ndnum);
+            obj.K=zeros(6*obj.f.node.ndnum,6*obj.f.node.ndnum);
             f=waitbar(0,'组装刚度矩阵','Name','FEM3DFRAME');
             for it=1:obj.f.manager_ele.num
                 waitbar(it/obj.f.manager_ele.num,f,['组装刚度矩阵' num2str(it) '/' num2str(obj.f.manager_ele.num)]);
                 e=obj.f.manager_ele.Get('index',it);
-                obj.K=e.FormK(K);
-                K=obj.K;
+                obj.K=e.FormK(obj.K);
                 
             end
             close(f);
+        end
+        function GetM(obj)%组装质量矩阵（边界条件引入之前) 务必先调用GetM形成映射
+            %M是总质量矩阵(边界条件处理前) 阶数为6*节点个数
+            
+            
+            
+            
+            obj.M=zeros(6*obj.f.node.ndnum,6*obj.f.node.ndnum);
+            f=waitbar(0,'组装质量矩阵','Name','FEM3DFRAME');
+            for it=1:obj.f.manager_ele.num
+                waitbar(it/obj.f.manager_ele.num,f,['组装刚度矩阵' num2str(it) '/' num2str(obj.f.manager_ele.num)]);
+                e=obj.f.manager_ele.Get('index',it);
+                obj.M=e.FormM(obj.M);
+                
+            end
+            close(f);
+        end
+    end
+    methods(Static)
+        function [w,mode]=GetInfoForFreeVibration_eig(k,m,nummode)
+            %利用广义特征值 KV=BVD求解自振信息
+            %nummode 可选 前几阶频率和振型
+            if nargin==2
+                nummode=size(k,1);
+            end
+            [mode,D]=eigs(k,m,nummode,'sm');%输出频率按从小到大排列
+            w=sqrt(diag(D));
+            %规格化振型
+            for it=1:nummode
+                mn=mode(:,it)'*m*mode(:,it);
+                mode(:,it)=mode(:,it)/sqrt(mn);
+            end
         end
     end
 end

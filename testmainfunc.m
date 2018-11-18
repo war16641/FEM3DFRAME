@@ -495,8 +495,8 @@ f.manager_lc.Add(lc);
 
 lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
 lc.AddBC('displ',[3 1 0;3 2 0;3 3 0;3 4 0;3 5 0;3 6 0;]);
-lc.AddBC('force',[2 2 1;]);
-lc.AddBC('force',[2 2 5;]);
+lc.AddBC('force',[2 4 1;]);
+lc.AddBC('force',[2 4 5;]);
 
 testcase.verifyError(@()lc.Solve(),'matlab:myerror','验证错误');
 end
@@ -584,4 +584,68 @@ lc.AddBC('force',[2 2 1;2 1 1]);
 lc.Solve();
 d4=[0.021828	0.01656	-7.874E-18	-0.0207	0.027285	0];
 testcase.verifyTrue(norm(lc.rst.Get('node','displ',4,'all')-d4)<0.001,'验证错误');
+end
+function test_verifymodel_17(testcase)
+%验证模型17 悬臂梁自振
+n=60;%单元个数
+h=30;%墩高
+lenel=h/n;%单元长度
+
+f=FEM3DFRAME();
+f.manager_mat.Add(32.5e6,0.2,2.5,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,15.84375,31.378,31.378,1e5);
+f.manager_sec.Add(sec);
+for it=1:n+1
+    f.node.AddByCartesian(0,0,0,(it-1)*lenel);
+end
+for it=1:n
+    tmp=ELEMENT_EULERBEAM(f,0,[it it+1],sec);
+    f.manager_ele.Add(tmp);
+end
+
+lc=LoadCase_Static(f,'dead');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+lc.AddBC('force',[n+1 1 1]);
+lc.Solve();
+
+
+lc=LoadCase_Modal(f,'modal');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+%删除扭转自由度
+for it=1:n+1
+    lc.AddBC('displ',[it 6 0;it 3 0]);
+    
+end
+lc.Solve();
+
+end
+function test_verifymodel_18(testcase)
+%验证模型18 一个单元
+n=1;%单元个数
+h=2;%墩高
+lenel=h/n;%单元长度
+
+f=FEM3DFRAME();
+f.manager_mat.Add(32.5e6,0.2,2.5,'concrete');
+mat=f.manager_mat.GetByIdentifier('concrete');
+sec=SECTION('ver',mat,15.84375,31.378,31.378,1e5);
+f.manager_sec.Add(sec);
+for it=1:n+1
+    f.node.AddByCartesian(0,0,0,(it-1)*lenel);
+end
+for it=1:n
+    tmp=ELEMENT_EULERBEAM(f,0,[it it+1],sec);
+    f.manager_ele.Add(tmp);
+end
+
+
+
+lc=LoadCase_Modal(f,'modal');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+lc.AddBC('displ',[2 1 0;2 3 0;2 5 0;2 6 0;]);
+lc.Solve();
 end

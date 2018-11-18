@@ -2,25 +2,29 @@ classdef BC<handle
     %有限元的边界条件包含力和位移
     
     properties
-        displ double
-        force double%约定：force未描述且displ未描述的节点力为0
+        displ 
+        force %约定：force未描述且displ未描述的节点力为0
         lc LoadCase
     end
     
     methods
         function obj = BC(lc)
             obj.lc=lc;
-            obj.displ=[];
-            obj.force=[];
+            obj.displ=VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED();
+            obj.force=VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED();
         end
         
-        function Add(obj,type,ln)%ln=ndid,dir,value         dir=1~6
-            %不能出现覆盖 要覆盖请使用overwrite函数
+        function Add(obj,type,ln,flag_overwrite)
+            %ln=ndid,dir,value         dir=1~6
+            %flag_overwrite指示是否覆盖 默认覆盖1
+            if nargin==3
+                flag_overwrite=1;
+            end
             
             %如果ln是多行拆成单行一行一行输
             if 1~=size(ln,1)
                 for it=1:size(ln,1)
-                    obj.Add(type,ln(it,:));
+                    obj.Add(type,ln(it,:),flag_overwrite);
                 end
                 return;
             end
@@ -34,11 +38,24 @@ classdef BC<handle
             end
             
             
+            
             switch type
                 case 'displ'
-                    obj.displ=[obj.displ;ln];%未检查重复
+                    [success,ow]=obj.displ.Add(ln(1)+ln(2)*0.1,ln,flag_overwrite);
+                    if success==0
+                        error('matlab:myerror','添加BC错误')
+                    end
+                    if ow==1
+                        disp(['位移荷载覆盖'  ' 节点' num2str(ln(1)) ' 方向'  num2str(ln(2))])
+                    end
                 case 'force'
-                    obj.force=[obj.force;ln];%未检查重复
+                    [success,ow]=obj.force.Add(ln(1)+ln(2)*0.1,ln,flag_overwrite);
+                    if success==0
+                        error('matlab:myerror','添加BC错误')
+                    end
+                    if ow==1
+                        disp(['力荷载覆盖'  ' 节点' num2str(ln(1)) ' 方向'  num2str(ln(2))])
+                    end
                 otherwise
                     error('adf')
             end
@@ -75,30 +92,23 @@ classdef BC<handle
             end
         end
         function Check(obj)%检查边界数据是否正常
-%             %要求force和displ不能重复
-%             [~,ia,~]=unique(obj.displ(:,[1 2]),'rows');
-%             if length(ia)~=size(obj.displ,1)
-%                 error('matlab:myerror','位移边界条件出现重复项')
-%             end
-%             [~,ia,~]=unique(obj.force(:,[1 2]),'rows');
-%             if length(ia)~=size(obj.force,1)
-%                 error('matlab:myerror','力边界条件出现重复项')
-%             end
+            obj.force.Check();
+            obj.displ.Check();
             
-            %要求力和位移边界条件不能重复指定同一个自由度 且各自内部也不能有重复的
-            len1=size(obj.displ,1);
-            len2=size(obj.force,1);
-            tmp=[];
-            if len1~=0
-                tmp=obj.displ(:,[1 2]);
-            end
-            if len2~=0
-                tmp=[tmp ;obj.force(:,[1 2])];
-            end
-            [~,ia,~]=unique(tmp,'rows');
-            if len1+len2~=length(ia)
-                error('matlab:myerror','边界条件出现重复项')
-            end
+
+%             len1=size(obj.displ,1);
+%             len2=size(obj.force,1);
+%             tmp=[];
+%             if len1~=0
+%                 tmp=obj.displ(:,[1 2]);
+%             end
+%             if len2~=0
+%                 tmp=[tmp ;obj.force(:,[1 2])];
+%             end
+%             [~,ia,~]=unique(tmp,'rows');
+%             if len1+len2~=length(ia)
+%                 error('matlab:myerror','边界条件出现重复项')
+%             end
         end
     end
 end

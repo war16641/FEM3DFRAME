@@ -97,6 +97,15 @@ classdef NODE<handle
         function SetupMapping(obj)%建立节点自由度对刚度矩阵(K)的映射 
             %这个函数执行应在solve中调用
             %此函数执行后 不应再对节点进行操作了
+            
+            %首先检查是否已建立mapping
+            if obj.ndnum==obj.nds_mapping.num
+                return;%已经建立
+            elseif obj.nds_mapping.num==0%未建立
+            else%建立了一个不完整的‘
+                error('已经建立了不完整的映射')
+            end
+            
             lastx=-5;
             for it=1:obj.ndnum
                 lastx=lastx+6;

@@ -6,9 +6,11 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         f FEM3DFRAME
         name char%工况名
         bc BC
-        rst Result
+        rst 
         
         K double%结构刚度矩阵 处理边界条件前
+        M double
+        C double
     end
     
     methods

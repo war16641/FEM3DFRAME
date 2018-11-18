@@ -8,6 +8,8 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
         ndcoor%存储节点坐标
         Kel double%单刚矩阵 总体坐标下
         Kel_ double%单刚矩阵 局部坐标下
+        Mel double%单元质量矩阵
+        Mel_ double
         C66 double %坐标转换矩阵 针对单个节点的
         hitbyele double%自由度是否被单元击中  有些单元的自由度并未激活 如桁架单元 有杆端弯矩释放的梁单元 格式为节点个数*6
         arg%计算中间量
@@ -37,7 +39,9 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
     end
     methods(Abstract)
         Kel = GetKel(obj)%形成自己的单元矩阵
+        Mel=GetMel(obj);%组装单元质量阵
         K=FormK(obj,K)%K为结构的刚度矩阵 将自己单元的矩阵送入结构
+        M=FormM(obj,M)
         [force,deform]=GetEleResult(obj,varargin)%根据结果计算单元的力和变形 force是单元内部力（局部坐标系下,节点对单元的力） deform是单元变形（局部坐标） 
     end
 end

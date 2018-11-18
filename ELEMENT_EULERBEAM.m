@@ -171,6 +171,50 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             tmp=obj.Kel_*[ui_local uj_local]';
             force=[tmp(1:6)';tmp(7:12)'];%转化为n*6形式
         end
+        function Mel=GetMel(obj)%组装质量矩阵
+            
+            %参数准备
+            rou=obj.sec.mat.rou;%密度
+            L=obj.f.node.Distance(obj.nds(1),obj.nds(2));%单元长度
+            J=obj.sec.J;
+            A=obj.sec.A;
+            Mel_=A*[rou*L/3	0	0	0	0	0	rou*L/6	0	0	0	0	0
+                0	156*rou*L/420	0	0	0	22*rou*L^2/420	0	54*rou*L/420	0	0	0	-13*rou*L^2/420
+                0	0	156*rou*L/420	0	22*rou*L^2/420	0	0	0	54*rou*L/420	0	-13*rou*L^2/420	0
+                0	0	0	rou*J*L/3	0	0	0	0	0	rou*J*L/6	0	0
+                0	0	0	0	4*rou*L^3/420	0	0	0	13*rou*L^2/420	0	-3*rou*L^3/420	0
+                0	0	0	0	0	4*rou*L^3/420	0	13*rou*L^2/420	0	0	0	-3*rou*L^3/420
+                0	0	0	0	0	0	rou*L/3	0	0	0	0	0
+                0	0	0	0	0	0	0	156*rou*L/420	0	0	0	-22*rou*L^2/420
+                0	0	0	0	0	0	0	0	156*rou*L/420	0	-22*rou*L^2/420	0
+                0	0	0	0	0	0	0	0	0	rou*J*L/3	0	0
+                0	0	0	0	0	0	0	0	0	0	4*rou*L^3/420	0
+                0	0	0	0	0	0	0	0	0	0	0	4*rou*L^3/420
+                ];
+            Mel_=MakeSymmetricMatrix(Mel_);%对称阵
+            obj.Mel_=Mel_;
+            
+            %转换至总体坐标系
+            C=[obj.C66 zeros(6,6);zeros(6,6) obj.C66];
+            Mel=C^-1*Mel_*C;
+            obj.Mel=Mel;
+            
+        end
+        function M=FormM(obj,M)
+            obj.GetMel();%先计算单刚矩阵 总体坐标
+            
+            %将Kel拆为6*6的子矩阵送入总刚K
+            n=length(obj.nds);
+            for it1=1:n
+                for it2=1:n
+                    x=obj.nds(it1);
+                    y=obj.nds(it2);
+                    xuhao1=obj.f.node.GetXuhaoByID(x);%得到 节点号对应于刚度矩阵的序号
+                    xuhao2=obj.f.node.GetXuhaoByID(y);
+                    M(xuhao1:xuhao1+5,xuhao2:xuhao2+5)=M(xuhao1:xuhao1+5,xuhao2:xuhao2+5)+obj.Mel(6*it1-5:6*it1,6*it2-5:6*it2);
+                end
+            end
+        end
     end
     methods(Static)
         function InitializeDir(obj,p)%初始化xdir ydir zdir三个向量 此函数的作用时给具有方向的单元（梁 连接单元）一个默认的方向
