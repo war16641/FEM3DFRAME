@@ -649,3 +649,28 @@ lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
 lc.AddBC('displ',[2 1 0;2 3 0;2 5 0;2 6 0;]);
 lc.Solve();
 end
+function test_verifymodel_19(testcase)
+%测试 mass单元
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,1.2);
+
+tmp=ELEMENT_SPRING(f,0,[1 2],[1.15 0.8 0 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,2,[23 25 30 0 0 0]);
+f.manager_ele.Add(tmp);
+
+lc=LoadCase_Modal(f,'modal');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+lc.Solve();
+
+w1=sqrt(0.8/23);
+w2=sqrt(1.15/30);
+[~,t]=lc.rst.GetPeriodInfo();
+testcase.verifyTrue(norm(t(3)-w1)<0.001,'验证错误');
+lc.rst.SetPointer(2);
+[~,t]=lc.rst.GetPeriodInfo();
+testcase.verifyTrue(norm(t(3)-w2)<0.001,'验证错误');
+
+end

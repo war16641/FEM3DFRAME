@@ -54,8 +54,7 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
         end
         
         function Kel = GetKel(obj)
-            %初始化有效自由度矩阵'
-            obj.hitbyele=zeros(2,6);
+
             
             %一个节点6自由度
             E=obj.sec.mat.E;
@@ -233,6 +232,31 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                 end
             else
                 obj.xdir=obj.f.node.DirBy2Node(obj.nds(1),obj.nds(2));
+                p=VectorDirection(p,'row');%转化为行向量
+                p=p/norm(p);%单位化
+                dot1=dot(p,obj.xdir);
+                beta=sqrt(1/(1-dot1^2));
+                alpha=-dot1*beta;
+                obj.zdir=alpha*obj.xdir+beta*p;
+                obj.ydir=cross(obj.zdir,obj.xdir);%叉乘得y向
+            end
+        end
+        function InitializeDir2(obj,xdir,p)%初始化xdir ydir zdir三个向量 指定xdir
+            if isempty(p)%不指定zdir定向向量p
+                obj.xdir=xdir/norm(xdir);
+                if isequal([0 0 1],obj.xdir)%x向为竖向
+                    obj.ydir=[1 0 0];
+                    obj.zdir=[0 1 0];%z向为整体的Y向
+                else%x向不为竖向
+                    %z向为整体Z向和x向平面内
+                    x1=obj.xdir(1);y1=obj.xdir(2);z1=obj.xdir(3);
+                    alpha=-z1*sqrt(1/(1-z1^2));
+                    beta=sqrt(1/(1-z1^2));
+                    obj.zdir=alpha*obj.xdir+beta*[0 0 1];
+                    obj.ydir=cross(obj.zdir,obj.xdir);%叉乘得y向
+                end
+            else
+                obj.xdir=xdir/norm(xdir);
                 p=VectorDirection(p,'row');%转化为行向量
                 p=p/norm(p);%单位化
                 dot1=dot(p,obj.xdir);

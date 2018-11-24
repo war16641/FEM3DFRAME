@@ -28,7 +28,7 @@ classdef Result_Modal<Result
 
         end
 
-        function [order,pi]=GetPerodInfo(obj)%返回当前的阶数和periodinfo信息
+        function [order,pi]=GetPeriodInfo(obj)%返回当前的阶数和periodinfo信息
             order=obj.pointer.framename;
             pi=obj.periodinfo.Get('index',order);
         end

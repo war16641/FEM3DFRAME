@@ -34,6 +34,9 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
             obj.id=id;
             obj.nds=nds;
             obj.ndcoor=[];%在开始计算单元刚度时载入坐标
+            
+            %初始化有效自由度矩阵
+            obj.hitbyele=zeros(length(obj.nds),6);
 
         end
     end
