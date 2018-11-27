@@ -674,3 +674,122 @@ lc.rst.SetPointer(2);
 testcase.verifyTrue(norm(t(3)-w2)<0.001,'验证错误');
 
 end
+function test_verifymodel_20(testcase)
+%测试 地震工况 三自由度
+
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1,0,0);
+f.node.AddByCartesian(3,2,0,0);
+f.node.AddByCartesian(4,3,0,0);
+m=267e3;
+
+tmp=ELEMENT_MASS(f,0,2,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,3,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,4,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+
+k=1.75e9;
+tmp=ELEMENT_SPRING(f,0,[1 2],[k 0 0 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[2 3],[k 0 0 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[3 4],[k 0 0 0 0 0]);
+f.manager_ele.Add(tmp);
+
+lc=LoadCase_Modal(f,'modal');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+lc.Solve();
+[~,pri]=lc.rst.GetPeriodInfo();
+w1=pri(3);
+lc.rst.SetPointer(3);
+[~,pri]=lc.rst.GetPeriodInfo();
+w2=pri(3);
+
+
+
+lc=LoadCase_Earthquake(f,'eq');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+
+% ew=EarthquakWave();
+% ew.LoadFromFile('landers','g','F:\TOB\地震波\Landers.txt','time&acc',0);
+
+dt=load('wjj.mat','dz');
+dt=dt.dz;
+ew=EarthquakWave(dt(:,1),dt(:,2),'m/s^2','dz');
+ei=EarthquakeInput(lc,'landers',ew,1,0);
+lc.AddEarthquakeInput(ei);
+lc.SetAlgorithm('newmark',0.5,0.25);
+[a, b]=DAMPING.RayleighDamping(w1,w2,0.05,0.05);
+
+lc.damp.Set('rayleigh',a,b);
+lc.Solve();
+[vn,tn]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+testcase.verifyTrue(norm(max(vn)-1.0106e-003)<0.001,'验证错误');
+end
+
+function test_verifymodel_21(testcase)
+%测试 地震工况 单节点受正玄波荷载
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1,0,0);
+
+m=1;
+
+tmp=ELEMENT_MASS(f,0,2,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+
+
+k=1;
+tmp=ELEMENT_SPRING(f,0,[1 2],[k 0 0 0 0 0]);
+f.manager_ele.Add(tmp);
+
+
+lc1=LoadCase_Modal(f,'modal');
+f.manager_lc.Add(lc1);
+lc1.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+lc1.Solve();
+[~,pri]=lc1.rst.GetPeriodInfo();
+w1=pri(3);
+
+
+
+lc=LoadCase_Earthquake(f,'eq');
+f.manager_lc.Add(lc);
+lc.CloneBC(lc1);
+
+
+ew=EarthquakWave.MakeSin(2/2/pi,1,10,0.01);
+ei=EarthquakeInput(lc,'sin',ew,1,0);
+lc.AddEarthquakeInput(ei);
+lc.SetAlgorithm('newmark',0.5,0.25);
+[a, b]=DAMPING.RayleighDamping(w1,5,0.005,0.005);
+
+lc.damp.Set('rayleigh',a,b);
+lc.Solve();
+[vn,tn]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+figure
+plot(tn,vn)
+syms t
+v_t=exp(-0.005*t)*(0.0022221*cos(0.99999*t) + 0.66666*sin(0.99999*t)) - 0.33332*sin(2.0*t) - 0.0022221*cos(2.0*t);
+v_v=subs(v_t,t,0:0.01:10);
+v_v=vpa(v_v,7);
+v_v=double(v_v);
+hold on
+plot(tn,-v_v,'+','markersize',3);
+legend('fem','精确值');
+syms t
+v_t=exp(-0.005*t)*(0.0022221*cos(0.99999*t) + 0.66666*sin(0.99999*t)) - 0.33332*sin(2.0*t) - 0.0022221*cos(2.0*t);
+v_v=subs(v_t,t,0:0.01:10);
+v_v=vpa(v_v,7);
+v_v=double(v_v);
+hold on
+plot(tn,-v_v,'+','markersize',3);
+legend('fem','精确值');
+er=v_v'+vn;
+testcase.verifyTrue(norm(er)<0.002,'验证错误');
+end

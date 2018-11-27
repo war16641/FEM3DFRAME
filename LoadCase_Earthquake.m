@@ -1,24 +1,65 @@
-classdef LoadCase_Modal<LoadCase
-    %自振工况
+classdef LoadCase_Earthquake<LoadCase
+    %地震时程工况
     
     properties
+        ei%地震波
+        algorithm%算法名
+        func%算法入口
+        arg%参数
+        damp DAMPING
         
+        R%质量影响列向量 参见《桥梁抗震》 P72
+        K1%边界条件处理后的三个矩阵
+        M1
+        C1 %在damp的make函数中生成
+        R1 %质量影响列向量 引入边界条件后
+
     end
     
     methods
-        function obj = LoadCase_Modal(f,name)
+        function obj = LoadCase_Earthquake(f,name)
             obj=obj@LoadCase(f,name);
-            obj.rst=Result_Modal(obj);%覆盖原有结果对象 改为使用模态专用结果对象
+            obj.ei=[];
+            obj.algorithm='';
+            obj.arg={};
+            obj.damp=DAMPING(obj);
+            obj.K1=[];
+            obj.M1=[];
+            obj.C1=[];
+        end
+        
+        function SetAlgorithm(obj,varargin)%设置算法
+            switch varargin{1}
+                case 'newmark'
+                    obj.algorithm='newmark';
+                    if length(varargin)~=3
+                        error('matlab:myerror','newmark有2参数')
+                    end
+                    obj.func=@obj.Newmark;
+                    obj.arg=varargin(2:end);
+                otherwise
+                    error('matlab:myerror','未知算法')
+            end
+        end
+        function AddEarthquakeInput(obj,ei)%暂时只做成一条波
+            obj.ei=ei;
         end
         function Solve(obj)
             obj.GetK();
             obj.GetM();
+            dof=size(obj.K,1);
+            %计算R
+            obj.R=zeros(dof,3);
+            tmp=1:6:6*dof;
+            obj.R(tmp,1)=1;%ux uy uz的质量影响为1
+            obj.R(tmp+1,2)=1;
+            obj.R(tmp+2,3)=1;
             
             %检查边界条件是否重复
             obj.bc.Check();
             
             %K1为引入边界条件的总刚度矩阵
-            dof=size(obj.K,1);
+            
             u=zeros(dof,1);
             
             %先处理位移边界
@@ -88,30 +129,30 @@ classdef LoadCase_Modal<LoadCase
             end
             
             %形成刚度 质量 矩阵 引入边界条件后
-            K1=obj.K(activeindex,activeindex);%去除一部分自由度
-            M1=obj.M(activeindex,activeindex);
+            obj.K1=obj.K(activeindex,activeindex);%去除一部分自由度
+            obj.M1=obj.M(activeindex,activeindex);
+            obj.R1=obj.R(activeindex,:);
             
-            %调用算法求解特征值
-            [w,mode]=LoadCase_Modal.GetInfoForFreeVibration_eig(K1,M1);
+            %计算阻尼
+            obj.damp.Make();%注意：在计算刚度 质量后计算阻尼
+            
+            %调用算法求解地震工况
+            [v, dv, ddv ]=obj.func();
             
             %处理求解后所有自由度上的力和位移 保存结果
-            tic
-            for it=1:length(w)%这一块循环有点花时间
-                w1=w(it);
-                mode1=mode(:,it);
-                u1=u;
-                u1(activeindex)=mode1;
-                f1=obj.K*u1;
-                obj.rst.Add(it,w1,f1,u1);
+            for it=1:obj.ei.ew.numofpoint
+                u(activeindex)=v(:,it);
+                f=obj.K*u;
+                obj.rst.AddTime(obj.ei.tn(it),f,u);
             end
-            toc
-
+            
+            %统计结果
             
 
             
             
             %初始化结果指针
-            obj.rst.SetPointer();
+            obj.rst.SetPointer('time',1);
 
         end
         function GetK(obj)
@@ -149,25 +190,74 @@ classdef LoadCase_Modal<LoadCase
             close(f);
         end
     end
-    methods(Static)
-        function [w,mode]=GetInfoForFreeVibration_eig(k,m,nummode)
-            %利用广义特征值 KV=BVD求解自振信息
-            %nummode 可选 前几阶频率和振型
-            if nargin==2
-                nummode=size(k,1);
-            end
-            if length(k)==1%单自由度
-                [mode,D]=eigs(m^-1*k,nummode,'sm');%输出频率按从小到大排列
-            else%多自由度
-                [mode,D]=eigs(k,m,nummode,'sm');%输出频率按从小到大排列
-            end
+    methods(Access=private)
+        function [v, dv, ddv ]=Newmark(obj)
+            %newmark-β法求解多自由度动力响应 在地震作用下
+            %要求结构是线性 K矩阵不变
+            %算法参见《有限单元法》王 P480
+            %K,M,C三个矩阵
+            %v0是列向量 每个自由度上的初始位移 dv0 ddv0初始速度和加速度
+            %F是矩阵 代表每个自由度上的力 一列代表某一时刻结构所受到的力 注意 F的列数与 time的列数相等 F第k列对应于t=（k-1)*dt时受力 F的第一列(0时刻)不重要
+            %gamma beta两个参数 0.5,0.25常加速度
+            %time 时间向量 与 F 对应 等差数列
+            K=obj.K1;
+            M=obj.M1;
+            C=obj.C1;
+            R=obj.R1;
+            tmp=size(K,1);
+            v0=zeros(tmp,1);
+            dv0=v0;
+            ddv0=v0;
+            gamma=obj.arg{1};
+            beta=obj.arg{2};
+            time=obj.ei.tn;
             
-            w=sqrt(diag(D));
-            %规格化振型
-            for it=1:nummode
-                mn=mode(:,it)'*m*mode(:,it);
-                mode(:,it)=mode(:,it)/sqrt(mn);
+            
+            
+            
+            n=size(K,1);%自由度个数
+            dt=time(2)-time(1);
+            
+            %% 检查gamma和beta的参数是否满足要求
+            if gamma<0.5||beta<0.25*(0.5+gamma)^2
+                %     error('参数gamma和beta不满足要求');
             end
+            %% 将地面加速度转化为等效节点荷载
+            timelen=length(time);
+            F=zeros(n,timelen);
+            for it=1:timelen
+                F(:,it)=-M*R*obj.ei.accn(:,it);
+            end
+            %% 常数的计算
+            c0=1/beta/dt^2;
+            c1=gamma/beta/dt;
+            c2=1/beta/dt;
+            c3=1/2/beta-1;
+            c4=gamma/beta-1;
+            c5=dt/2*(gamma/beta-2);
+            c6=dt*(1-gamma);
+            c7=gamma*dt;
+            %%
+            Kpa=K+c0*M+c1*C;
+            Kpali=Kpa^-1;
+            %% 循环求解部分
+            % len=floor(tend/dt);
+            len=length(time);
+            v=[ zeros(n,len)];v(:,1)=v0;
+            dv=[zeros(n,len)];dv(:,1)=dv0;
+            ddv=[zeros(n,len)];ddv(:,1)=ddv0;
+            f=waitbar(0,'时程工况计算','Name','FEM3DFRAME');
+            for it=2:len%it是当前要算的 已经算到it-1
+                Fnowpa=F(:,it)+M*(c0*v(:,it-1)+c2*dv(:,it-1)+c3*ddv(:,it-1))+C*(c1*v(:,it-1)+c4*dv(:,it-1)+c5*ddv(:,it-1));
+                v(:,it)=Kpali*Fnowpa;
+                ddv(:,it)=c0*(v(:,it)-v(:,it-1))-c2*dv(:,it-1)-c3*ddv(:,it-1);
+                dv(:,it)=dv(:,it-1)+c6*ddv(:,it-1)+c7*ddv(:,it);
+                waitbar(it/len,f,['时程工况计算' num2str(it) '/' num2str(len)]);
+            end
+            close(f);
+            %% 后处理 做出位移时程图
+
+            %plot(time,v);
         end
     end
 end

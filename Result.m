@@ -48,6 +48,27 @@ classdef Result<handle
 
 
         end
+        function [r,tn]=GetTimeHistory(obj,t1,t2,varargin)%获取时程结果
+            if t1<0||isempty(t1)
+                t1=0;
+            end
+            if t2>obj.timeframe.Get('index',obj.timeframe.num)||isempty(t2)
+                t2=obj.timeframe.Get('index',obj.timeframe.num);
+            end
+            [ind1,index1]=obj.timeframe.FindId(t1);
+            [ind2,index2]=obj.timeframe.FindId(t2);%查找起始和结束结果序号
+            index1=max([ind1 index1]);
+            index2=max([ind2 index2]);
+            numline=index2-index1+1;%结果帧个数
+            r=[];
+            tn=[];
+            for it=index1:index2
+                tmp=obj.timeframe.Get('index',it);
+                r1=tmp.Get(varargin);
+                r=[r;r1];
+                tn=[tn;tmp.framename];
+            end
+        end
     end
 end
 
