@@ -31,7 +31,6 @@ classdef EleResultFrame<handle
                         obj.force.Append(e.id,force);
                         obj.deform.Append(e.id,deform);
                         obj.eng.Append(e.id,eng);
-                        eng_summation=eng_summation+eng;
                     case 2%两节点 常见
                         %取出节点的位移
                         ui=obj.rf.ndrst.Get('displ',e.nds(1),'all');
@@ -40,12 +39,10 @@ classdef EleResultFrame<handle
                         obj.force.Append(e.id,force);
                         obj.deform.Append(e.id,deform);
                         obj.eng.Append(e.id,eng);
-                        eng_summation=eng_summation+eng;
                     otherwise
                         error('matlab:myerror','没见过这么多节点的单元。')
                 end
             end
-            obj.rf.engrst=eng_summation;%将结构的能量写入rf中
             obj.force.Check();
             obj.deform.Check();
         end

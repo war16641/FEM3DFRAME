@@ -22,14 +22,13 @@ properties
                 error('matlab:myerror','计算节点结果时，已有节点结果。')
             end
             %预处理
-            varargin=Hull(varargin);
-            if length(varargin)==2
+            if leng==3
                 vector_f=varargin{1};
                 vectro_u=varargin{2};
                 t=length(vector_f);%不指定速度和加速度时 这些数据设为0
                 vector_u_t=zeros(t,1);
                 vector_u_tt=zeros(t,1);
-            elseif length(varargin)==4
+            elseif nargin==5
                 vector_f=varargin{1};
                 vectro_u=varargin{2};
                 vector_u_t=varargin{3};

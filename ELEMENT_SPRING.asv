@@ -112,9 +112,7 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
             force=[tmp(1:6)';tmp(7:12)'];%转化为n*6形式
             
             %能量
-            Eng=[0 0 0];%势能动能耗能
-            delta=[ui'; uj'];
-            Eng(1)=0.5*delta'*obj.Kel*delta;
+            eng
         end
         function Mel=GetMel(obj)
             

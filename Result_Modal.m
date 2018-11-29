@@ -32,6 +32,13 @@ classdef Result_Modal<Result
             order=obj.pointer.framename;
             pi=obj.periodinfo.Get('index',order);
         end
+        function PrintPeriodInfo(obj)%打印periodinfo信息
+            fprintf('%10s%10s%10s%10s\n','阶数','周期','频率','角频率');
+            for it=1:obj.periodinfo.num
+                pi=obj.periodinfo.Get('index',it);
+                fprintf('%10.4f%10.4f%10.4f%10.4f\n',it,pi(1),pi(2),pi(3));
+            end
+        end
     end
 end
 

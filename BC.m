@@ -94,7 +94,17 @@ classdef BC<handle
         function Check(obj)%检查边界数据是否正常
             obj.force.Check();
             obj.displ.Check();
-            
+            %检查位移 力是否同时加载在同一自由度上
+            if obj.force.num>0&&obj.displ.num>0
+                tmp1=[obj.force.object{:,1}];
+                tmp2=[obj.displ.object{:,1}];
+                tmp=[tmp1 tmp2];
+                [~,ia,~]=unique(tmp);
+                if length(ia)~=obj.force.num+obj.displ.num
+                    error('nyh:error','位移 力是否同时加载在同一自由度上')
+                end
+            end
+
 
 %             len1=size(obj.displ,1);
 %             len2=size(obj.force,1);

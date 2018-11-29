@@ -154,7 +154,7 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                 end
             end
         end
-        function [force,deform]=GetEleResult(obj,varargin)
+        function [force,deform,eng]=GetEleResult(obj,varargin)
             %根据计算结果（节点位移） 计算单元力 变形
             %varargin 只输入两个节点ij的变形2*6 
             if length(varargin)~=1
@@ -169,6 +169,9 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             uj_local=uj*cli;%两节点位移 局部坐标
             tmp=obj.Kel_*[ui_local uj_local]';
             force=[tmp(1:6)';tmp(7:12)'];%转化为n*6形式
+            
+            %能量
+            eng=[0 0 0];
         end
         function Mel=GetMel(obj)%组装质量矩阵
             

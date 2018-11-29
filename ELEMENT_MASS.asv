@@ -79,12 +79,10 @@ classdef ELEMENT_MASS<ELEMENT3DFRAME
             end
         end
         function [force,deform,eng]=GetEleResult(obj,varargin)%根据计算结果（节点位移） 计算单元力 变形
-            varargin=Hull(varargin);
             force=zeros(1,6);
             deform=force;%质量节点没有力和变形 
             eng=[0 0 0];%势能动能耗能
-            v=varargin{2};%寻找速度
-            eng(2)=0.5*v*obj.Mel*v';
+            v=varargin{1};
             
         end
     end
