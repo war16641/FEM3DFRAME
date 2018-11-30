@@ -7,7 +7,7 @@ classdef LoadCase_Earthquake<LoadCase
         func%算法入口
         arg%参数
         damp DAMPING
-        intd InitialDispl
+        intd InitialDispl%初始位移
         
         R%质量影响列向量 参见《桥梁抗震》 P72
         K1%边界条件处理后的三个矩阵
@@ -18,6 +18,7 @@ classdef LoadCase_Earthquake<LoadCase
         dof%自由度数 未引入边界条件前
         activeindex%有效自由度索引
         md%模态坐标 有时会用到
+        deadf%恒载力向量 引入边界条件前 在bc中获得
     end
     properties(Access=private)
 
@@ -122,9 +123,6 @@ classdef LoadCase_Earthquake<LoadCase
             for it=1:obj.bc.force.num
                 ln=obj.bc.force.Get('index',it);
                 index=obj.f.node.GetXuhaoByID(ln(1))+ln(2)-1;
-                if ln(3)~=0
-                    error('matlab:myerror','自振工况不能出现力不为0的边界条件')
-                end
                 ft(index)=ft(index)+ln(3);
                 index_force=[index_force index];
             end
@@ -146,7 +144,8 @@ classdef LoadCase_Earthquake<LoadCase
             
             %计算初始位移条件
             obj.intd.MakeU0();
-            
+            %计算恒载力
+            obj.MakeDeadload();
             %调用算法求解地震工况
             [v, dv, ddv ]=obj.func();
             
@@ -215,6 +214,16 @@ classdef LoadCase_Earthquake<LoadCase
             md=ModalDispl(mlc,obj);
             obj.md=md;
         end
+        function MakeDeadload(obj)%计算恒载力向量
+            obj.deadf=zeros(obj.dof,1);
+            %只计算其力边界条件 不管位移边界条件
+            for it=1:obj.bc.force.num
+                ln=obj.bc.force.Get('index',it);
+                index=obj.f.node.GetXuhaoByID(ln(1))+ln(2)-1;
+                obj.deadf(index)=obj.deadf(index)+ln(3);
+            end
+
+        end
     end
     methods(Access=private)
         function [v, dv, ddv ]=Newmark(obj)
@@ -230,6 +239,7 @@ classdef LoadCase_Earthquake<LoadCase
             M=obj.M1;
             C=obj.C1;
             R=obj.R1;
+            deadf1=obj.deadf(obj.activeindex);%恒载 有效自由度
             tmp=size(K,1);
             v0=obj.intd.u0(obj.activeindex);
             dv0=zeros(tmp,1);
@@ -252,7 +262,7 @@ classdef LoadCase_Earthquake<LoadCase
             timelen=length(time);
             F=zeros(n,timelen);
             for it=1:timelen
-                F(:,it)=-M*R*obj.ei.accn(:,it);
+                F(:,it)=-M*R*obj.ei.accn(:,it)+deadf1;%这里记得加上恒载力
             end
             %% 常数的计算
             c0=1/beta/dt^2;
@@ -301,9 +311,8 @@ classdef LoadCase_Earthquake<LoadCase
             obj.rst.AddTime(time(1),obj.K*u,u);%写入第一步的结果
             wb=waitbar(0,'时程工况计算','Name','FEM3DFRAME');
             for it=2:len%it是当前要算的 即目标步 已经算到it-1 即上一步
-%                 Fnowpaoo=F(:,it)+M*(c0*v(:,it-1)+c2*dv(:,it-1)+c3*ddv(:,it-1))+C*(c1*v(:,it-1)+c4*dv(:,it-1)+c5*ddv(:,it-1));
+
                 Fpa_inc=F_inc(:,it)+M*(c0*v_inc_last+c2*dv_inc_last+c3*ddv_inc_last)+C*(c1*v_inc_last+c4*dv_inc_last+c5*ddv_inc_last);%目标步等效荷载增量
-%                 voo=Kpali*Fnowpa;
                 v_inc=Kpali*Fpa_inc;%目标步位移增量
                 %计算出位移 速度 加速度值
                 v(:,it)=v(:,it-1)+v_inc;%位移
@@ -311,8 +320,6 @@ classdef LoadCase_Earthquake<LoadCase
                 dv(:,it)=dv(:,it-1)+c6*ddv(:,it-1)+c7*ddv(:,it);
                 
                 
-%                 ddvoo=c0*(v(:,it)-v(:,it-1))-c2*dv(:,it-1)-c3*ddv(:,it-1);
-%                 dvoo=dv(:,it-1)+c6*ddv(:,it-1)+c7*ddv(:,it);
                 waitbar(it/len,wb,['时程工况计算' num2str(it) '/' num2str(len)]);%更新wb
                 
                 %将当前步的计算结果保存到fem中
