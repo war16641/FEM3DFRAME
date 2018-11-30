@@ -233,7 +233,7 @@ classdef LoadCase_Earthquake<LoadCase
             tmp=size(K,1);
             v0=obj.intd.u0(obj.activeindex);
             dv0=zeros(tmp,1);
-            ddv0=zeros(tmp,1);
+%             ddv0=zeros(tmp,1);
             gamma=obj.arg{1};
             beta=obj.arg{2};
             time=obj.ei.tn;
@@ -274,28 +274,58 @@ classdef LoadCase_Earthquake<LoadCase
             len=length(time);
             v=[ zeros(n,len)];v(:,1)=v0;
             dv=[zeros(n,len)];dv(:,1)=dv0;
-            ddv=[zeros(n,len)];ddv(:,1)=ddv0;
+            ddv=[zeros(n,len)];ddv0=M^-1*(F(:,1)-C*dv0-K*v0);ddv(:,1)=ddv0;
+            %计算-1步的位移速度加速度
+            tmp=size(K,1);
+            b=[dv0-gamma*dt*ddv0
+                v0-beta*dt^2*ddv0
+                zeros(tmp,1)];
+            A=[zeros(tmp,tmp) eye(tmp) (1-gamma)*dt*eye(tmp)
+               eye(tmp)      dt*eye(tmp) (0.5-beta)*dt^2*eye(tmp)
+               K               C                 M];
+            tmp2=A^-1*b;
+            vf1=tmp2(1:tmp);
+            dvf1=tmp2(tmp+1:2*tmp);
+            ddvf1=tmp2(2*tmp+1:end);
+            
             %载入初始位移
             u(obj.activeindex)=v0;
             u_t(obj.activeindex)=dv0;
             u_tt(obj.activeindex)=ddv0;
+            %计算增量
+            F_inc=F;
+            F_inc(:,2:end)=F(:,2:end)-F(:,1:end-1);%荷载增量=目标步值-上步值
+            v_inc_last=v(:,1)-vf1;%上一步位移增量
+            dv_inc_last=dv(:,1)-dvf1;%上一步速度增量
+            ddv_inc_last=ddv(:,1)-ddvf1;%上一步加速度增量
             obj.rst.AddTime(time(1),obj.K*u,u);%写入第一步的结果
             wb=waitbar(0,'时程工况计算','Name','FEM3DFRAME');
-            for it=2:len%it是当前要算的 已经算到it-1
-                Fnowpa=F(:,it)+M*(c0*v(:,it-1)+c2*dv(:,it-1)+c3*ddv(:,it-1))+C*(c1*v(:,it-1)+c4*dv(:,it-1)+c5*ddv(:,it-1));
-                v(:,it)=Kpali*Fnowpa;
-                
-                
-                
-                ddv(:,it)=c0*(v(:,it)-v(:,it-1))-c2*dv(:,it-1)-c3*ddv(:,it-1);
+            for it=2:len%it是当前要算的 即目标步 已经算到it-1 即上一步
+%                 Fnowpaoo=F(:,it)+M*(c0*v(:,it-1)+c2*dv(:,it-1)+c3*ddv(:,it-1))+C*(c1*v(:,it-1)+c4*dv(:,it-1)+c5*ddv(:,it-1));
+                Fpa_inc=F_inc(:,it)+M*(c0*v_inc_last+c2*dv_inc_last+c3*ddv_inc_last)+C*(c1*v_inc_last+c4*dv_inc_last+c5*ddv_inc_last);%目标步等效荷载增量
+%                 voo=Kpali*Fnowpa;
+                v_inc=Kpali*Fpa_inc;%目标步位移增量
+                %计算出位移 速度 加速度值
+                v(:,it)=v(:,it-1)+v_inc;%位移
+                ddv(:,it)=c0*v_inc-c2*dv(:,it-1)-c3*ddv(:,it-1);%加速度
                 dv(:,it)=dv(:,it-1)+c6*ddv(:,it-1)+c7*ddv(:,it);
-                waitbar(it/len,wb,['时程工况计算' num2str(it) '/' num2str(len)]);
                 
+                
+%                 ddvoo=c0*(v(:,it)-v(:,it-1))-c2*dv(:,it-1)-c3*ddv(:,it-1);
+%                 dvoo=dv(:,it-1)+c6*ddv(:,it-1)+c7*ddv(:,it);
+                waitbar(it/len,wb,['时程工况计算' num2str(it) '/' num2str(len)]);%更新wb
+                
+                %将当前步的计算结果保存到fem中
                 u(obj.activeindex)=v(:,it);%结构的位移列向量
                 u_t(obj.activeindex)=dv(:,it);
                 u_tt(obj.activeindex)=ddv(:,it);
                 f=obj.K*u;%结构的受力
                 obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
+                
+                %更新位移速度加速度的 上一步增量
+                v_inc_last=v_inc;
+                dv_inc_last=dv(:,it)-dv(:,it-1);
+                ddv_inc_last=ddv(:,it)-ddv(:,it-1);
             end
             close(wb);
 

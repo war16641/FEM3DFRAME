@@ -733,9 +733,7 @@ lc.Solve();
 [vn,tn]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
 testcase.verifyTrue(norm(max(vn)-1.0106e-003)<0.001,'验证错误');
 
-%计算模态坐标
-md=lc.MakeModalDispl(lc1);
-md.PlotData();
+
 end
 
 function test_verifymodel_21(testcase)
