@@ -5,6 +5,7 @@ classdef EleResultFrame<handle
     properties
         rf ResultFrame
         force VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED%单元力 节点对单元的力 局部坐标 第一列是单元id 第二列n*6数值矩阵
+        %方向是是节点对单元的力
         deform VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED%单元变形 局部坐标 第一列是单元id
         eng VCM.VALUE_CLASS_MANAGER_UNIQUE_SORTED%单元能量
     end

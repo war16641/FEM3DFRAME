@@ -8,6 +8,9 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         bc BC
         rst 
         
+        dof%自由度数 未引入边界条件前
+        activeindex%有效自由度索引
+        
         K double%结构刚度矩阵 处理边界条件前
         M double
         C double
@@ -19,6 +22,7 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
             obj.name=name;
             obj.bc=BC(obj);
             obj.rst=Result(obj);
+           
 
         end
         

@@ -1,5 +1,6 @@
 function tests=testmainfunc()
 %测试函数
+close all
 tests=functiontests(localfunctions);
 end
 function test1(testcase)
@@ -1052,4 +1053,37 @@ legend('fem','解析解')
 er=norm(vn-v_v');
 
 testcase.verifyTrue(er/2001<0.002,'验证错误');
+end
+
+
+function test_verifymodel_26(testcase)%验证模型26 %验证spring单元非线性
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,1.2);
+tmp=ELEMENT_SPRING(f,0,[1 2],[1.15 0.8 0 0 0 0]);
+tmp.SetNLProperty(1,[1 1 0.1]);
+f.manager_ele.Add(tmp);
+
+lc=LoadCase_Static(f,'dead');
+f.manager_lc.Add(lc);
+
+
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+lc.AddBC('force',[2 3 1]);
+
+lc.Solve();
+r1=lc.rst.Get('node','displ',2,3);
+r2=lc.rst.Get('ele','force',1,'i','all');
+testcase.verifyTrue(norm(r1-1)<0.002,'验证错误');
+testcase.verifyTrue(norm(r2-[-1 0 0 0 0 0])<0.002,'验证错误');
+
+lc=LoadCase_Static(f,'dead2');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+lc.AddBC('force',[2 3 1.5]);
+lc.Solve();
+r1=lc.rst.Get('node','displ',2,3);
+r2=lc.rst.Get('ele','force',1,'i','all');
+testcase.verifyTrue(norm(r1-6)<0.002,'验证错误');
+testcase.verifyTrue(norm(r2-[-1.5 0 0 0 0 0])<0.002,'验证错误');
 end

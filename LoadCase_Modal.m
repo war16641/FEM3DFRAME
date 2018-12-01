@@ -7,8 +7,7 @@ classdef LoadCase_Modal<LoadCase
         mode%阵型矩阵
         w%周期信息
         
-        dof%自由度数 未引入边界条件前
-        activeindex%有效自由度索引
+
     end
     
     methods
@@ -18,6 +17,9 @@ classdef LoadCase_Modal<LoadCase
             obj.arg={[],'k'};
         end
         function Solve(obj)
+            %形成节点与刚度矩阵的映射
+            obj.f.node.SetupMapping();
+            
             obj.GetK();
             obj.GetM();
             
@@ -49,6 +51,7 @@ classdef LoadCase_Modal<LoadCase
             
             for it=1:obj.f.manager_ele.num
                 e=obj.f.manager_ele.Get('index',it);
+                e.CalcHitbyele();
                 for it1=1:length(e.nds)
                     xh=obj.f.node.GetXuhaoByID(e.nds(it1));
                     hit(xh:xh+5)=hit(xh:xh+5)+e.hitbyele(it1,:)';%hit加1
@@ -126,8 +129,7 @@ classdef LoadCase_Modal<LoadCase
         function GetK(obj)
             %K是总刚度矩阵(边界条件处理前) 阶数为6*节点个数
             
-            %形成节点与刚度矩阵的映射
-            obj.f.node.SetupMapping();
+            
 
             
             

@@ -129,16 +129,17 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
            Kel=C^-1*Kel_*C;
            obj.Kel=Kel;
            
-           %计算有效自由度
-            dg=diag(Kel);
-            tmp=dg(1:6);
-            tmp=abs(tmp)>1e-10;
-            obj.hitbyele(1,tmp)=obj.hitbyele(1,tmp)+1;
-            tmp=dg(7:12);
-            tmp=abs(tmp)>1e-10;
-            obj.hitbyele(2,tmp)=obj.hitbyele(2,tmp)+1;
+%            %计算有效自由度
+%             dg=diag(Kel);
+%             tmp=dg(1:6);
+%             tmp=abs(tmp)>1e-10;
+%             obj.hitbyele(1,tmp)=obj.hitbyele(1,tmp)+1;
+%             tmp=dg(7:12);
+%             tmp=abs(tmp)>1e-10;
+%             obj.hitbyele(2,tmp)=obj.hitbyele(2,tmp)+1;
             
         end
+        
         function K=FormK(obj,K)
             obj.GetKel();%先计算单刚矩阵 总体坐标
             
@@ -216,6 +217,11 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
                     M(xuhao1:xuhao1+5,xuhao2:xuhao2+5)=M(xuhao1:xuhao1+5,xuhao2:xuhao2+5)+obj.Mel(6*it1-5:6*it1,6*it2-5:6*it2);
                 end
             end
+        end
+        function InitialKT(obj)%初始化KTel Fsel
+            sz=length(obj.nds)*6;
+            obj.Fsel=zeros(sz,1);
+            obj.KTel=zeros(sz,sz);
         end
     end
     methods(Static)

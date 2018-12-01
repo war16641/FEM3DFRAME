@@ -46,8 +46,8 @@ classdef ELEMENT_MASS<ELEMENT3DFRAME
            C=[C zeros(3,3);zeros(3,3) C];
            obj.C66=C;%保存单节点的转换矩阵
            
-           %计算有效自由度
-            obj.hitbyele=zeros(1,6);
+%            %计算有效自由度
+%             obj.hitbyele=zeros(1,6);
 
         end
         function K=FormK(obj,K)
@@ -86,6 +86,11 @@ classdef ELEMENT_MASS<ELEMENT3DFRAME
             v=varargin{2};%寻找速度
             eng(2)=0.5*v*obj.Mel*v';
             
+        end
+        function InitialKT(obj)%初始化KTel Fsel
+            sz=length(obj.nds)*6;
+            obj.Fsel=zeros(sz,1);
+            obj.KTel=zeros(sz,sz);
         end
     end
 end

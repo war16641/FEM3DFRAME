@@ -6,6 +6,10 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
         ydir
         zdir double %3个单位方向向量 均为行向量  x方向是 从i到j  z向在初始化是指定 y向根据xz推出(右手法则)
         const double %此单元的常数 1*6 double 刚度
+        dir_nl double%非线性属性 列向量 自由度方向（局部坐标）
+        prop_nl double%非线性属性  屈前刚度 屈服力 屈后刚度 屈服位移
+        nlstate %非线性属状态结构体
+%         dv_history_NR cell%牛顿拉普森迭代过程中产生的中间过程量
     end
     
     methods
@@ -31,8 +35,8 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
         end
         
         function Kel = GetKel(obj)
-            %初始化有效自由度矩阵'
-            obj.hitbyele=zeros(2,6);
+%             %初始化有效自由度矩阵'
+%             obj.hitbyele=zeros(2,6);
             
             %生成局部坐标下的单刚
             kx=obj.const(1);
@@ -70,31 +74,32 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
            Kel=C^-1*Kel_*C;
            obj.Kel=Kel;
            
-           %计算有效自由度
-            dg=diag(Kel);
-            tmp=dg(1:6);
-            tmp=abs(tmp)>1e-10;
-            obj.hitbyele(1,tmp)=obj.hitbyele(1,tmp)+1;
-            tmp=dg(7:12);
-            tmp=abs(tmp)>1e-10;
-            obj.hitbyele(2,tmp)=obj.hitbyele(2,tmp)+1;
+%            %计算有效自由度
+%             dg=diag(Kel);
+%             tmp=dg(1:6);
+%             tmp=abs(tmp)>1e-10;
+%             obj.hitbyele(1,tmp)=1;
+%             tmp=dg(7:12);
+%             tmp=abs(tmp)>1e-10;
+%             obj.hitbyele(2,tmp)=1;
             
         end
         function K=FormK(obj,K)
             obj.GetKel();%先计算单刚矩阵 总体坐标
-            
+            K=obj.FormMatrix(K,obj.Kel);
             %将Kel拆为6*6的子矩阵送入总刚K
-            n=length(obj.nds);
-            for it1=1:n
-                for it2=1:n
-                    x=obj.nds(it1);
-                    y=obj.nds(it2);
-                    xuhao1=obj.f.node.GetXuhaoByID(x);%得到 节点号对应于刚度矩阵的序号
-                    xuhao2=obj.f.node.GetXuhaoByID(y);
-                    K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)=K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)+obj.Kel(6*it1-5:6*it1,6*it2-5:6*it2);
-                end
-            end
+%             n=length(obj.nds);
+%             for it1=1:n
+%                 for it2=1:n
+%                     x=obj.nds(it1);
+%                     y=obj.nds(it2);
+%                     xuhao1=obj.f.node.GetXuhaoByID(x);%得到 节点号对应于刚度矩阵的序号
+%                     xuhao2=obj.f.node.GetXuhaoByID(y);
+%                     K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)=K(xuhao1:xuhao1+5,xuhao2:xuhao2+5)+obj.Kel(6*it1-5:6*it1,6*it2-5:6*it2);
+%                 end
+%             end
         end
+
         function [force,deform,Eng]=GetEleResult(obj,varargin)
             %根据计算结果（节点位移） 计算单元力 变形
             %varargin 只输入两个节点ij的变形2*6 
@@ -110,7 +115,10 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
             uj_local=uj*cli;%两节点位移 局部坐标
             tmp=obj.Kel_*[ui_local uj_local]';
             force=[tmp(1:6)';tmp(7:12)'];%转化为n*6形式
-            
+            %加上非线性的部分
+            C=[obj.C66 zeros(6,6);zeros(6,6) obj.C66];
+            tmp=obj.Fsel'*C^-1;
+            force=force+[tmp(1:6) ;tmp(7:12)];
             %能量
             Eng=[0 0 0];%势能动能耗能
             delta=[ui'; uj'];
@@ -122,6 +130,155 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
         function M=FormM(obj,M)
             %此单元无质量
         end
+        function SetNLProperty(obj,dir,prop)%设置非线性属性
+            %prop只需输入前三个 第四个数自动计算算出
+            if obj.flag_nl==0%未设置非线性
+                obj.flag_nl=1;
+            end
+            
+            obj.dir_nl=[obj.dir_nl ;dir];
+            prop=[prop prop(2)/prop(1)];
+            obj.prop_nl=[obj.prop_nl;prop];
+            obj.const(dir)=0;%需要删除非线性自由度对应的线性刚度
+            %初始化非线性状态
+            tmp.ela=0;
+            tmp.dumax=prop(4);
+            tmp.dumin=-prop(4);
+            tmp.fs=0;
+            tmp.kt=0;
+            tmp.dv_NRhistory=[];
+            obj.nlstate=[obj.nlstate;tmp];%保存到类中
+        end
+        function [Fs,KT]=AddNRHistory(obj,varargin)
+            %varargin是节点位移向量的增量
+            %Fs是节点对单元的力 只含非线性部分
+            %Fs是单元在nr过程中刚度 只含非线性部分
+            ui=varargin{1}(1:6);
+            uj=varargin{1}(7:12);%两节点位移 总体坐标
+            deform_global=uj-ui;%整体坐标系下的变形
+            cli=obj.C66^-1;
+            deform=deform_global'*cli;%局部变形的增量
+            Fs=zeros(12,1);
+            KT=zeros(12,12);
+            for it=1:length(obj.dir_nl)
+                dir=obj.dir_nl(it);
+                dv=deform(dir);%变形增量
+                obj.nlstate(it).dv_NRhistory=[obj.nlstate(it).dv_NRhistory; [dv 0 0 0]];
+                %计算fs和kt
+                k1=obj.prop_nl(it,1);
+                k2=obj.prop_nl(it,3);
+                dvhe=sum(obj.nlstate(it).dv_NRhistory(:,1));%所有nr过程变形增量的和
+                if dvhe>=obj.nlstate(it).dumax%进入受拉塑性
+                    fs=obj.nlstate(it).fs+k1*obj.nlstate(it).dumax+k2*(dvhe-obj.nlstate(it).dumax);
+                    kt=k2;
+                    ela=1;
+                elseif dvhe<=obj.nlstate(it).dumin%进入受拉塑性
+                    fs=obj.nlstate(it).fs+k1*obj.nlstate(it).dumin+k2*(dvhe-obj.nlstate(it).dumin);
+                    kt=k2;
+                    ela=-1;
+                else
+                    fs=obj.nlstate(it).fs+dvhe*k1;
+                    kt=k1;
+                    ela=obj.nlstate(it).ela+dvhe/obj.prop_nl(it,4);
+                end
+                %保存fs kt到nrhistory中
+                obj.nlstate(it).dv_NRhistory(end,2)=fs;
+                obj.nlstate(it).dv_NRhistory(end,3)=kt;
+                obj.nlstate(it).dv_NRhistory(end,4)=ela;
+                %输出切线矩阵 只含线性 节点力
+                Fs(dir)=-fs;
+                Fs(dir+6)=fs;
+                KT(dir,dir)=kt;
+                KT(dir+6,dir+6)=kt;
+                KT(dir+6,dir)=-kt;
+                KT(dir,dir+6)=-kt;
+                %转换到总体坐标
+                C=[obj.C66 zeros(6,6);zeros(6,6) obj.C66 ];
+                KT=C^-1*KT*C;
+                Fs=Fs'*C;
+                Fs=Fs';
+            end
+        end
+        function FinishNR(obj)%结束nr过程
+            Fs=zeros(12,1);
+            KT=zeros(12,12);
+            for it=1:length(obj.dir_nl)
+                dir=obj.dir_nl(it);
+                %将nr过程中最后一步载入到nlstate中
+                obj.nlstate(it).fs=obj.nlstate(it).dv_NRhistory(end,2);
+                obj.nlstate(it).kt=obj.nlstate(it).dv_NRhistory(end,3);
+                obj.nlstate(it).ela=obj.nlstate(it).dv_NRhistory(end,4);
+                obj.nlstate(it).dumax=(1-obj.nlstate(it).ela)*obj.prop_nl(it,4);
+                obj.nlstate(it).dumin=(-1-obj.nlstate(it).ela)*obj.prop_nl(it,4);
+                %清除nrhistory信息
+                obj.nlstate(it).dv_NRhistory=[];
+                %输出切线矩阵 只含线性 节点力
+                fs=obj.nlstate(it).fs;
+                kt=obj.nlstate(it).kt;
+                Fs(dir)=-fs;
+                Fs(dir+6)=fs;
+                KT(dir,dir)=kt;
+                KT(dir+6,dir+6)=kt;
+                KT(dir+6,dir)=-kt;
+                KT(dir,dir+6)=-kt;
+                %转换到总体坐标
+                C=[obj.C66 zeros(6,6); zeros(6,6) obj.C66];
+                KT=C^-1*KT*C;
+                Fs=Fs'*C;
+                Fs=Fs';
+            end
+            %写入KTel Fsel
+            obj.Fsel=Fs;
+            obj.KTel=KT;
+        end
+        function [KTel,Fsel]=GetKT(obj)%计算非线性部分的的刚度矩阵
+            KTel=obj.KTel;
+            Fsel=obj.Fsel;
+%             kt=zeros(12,12);
+%             for it=1:length(obj.dir_nl)
+%                 dir=obj.dir_nl(it);%自由度
+%                 if obj.nlstate(it).ela==-1 || obj.nlstate(it).ela==1%屈服
+%                     k=obj.prop_nl(it,3);%屈后刚度
+%                 else
+%                     k=obj.prop_nl(it,1);%屈前刚度
+%                 end
+%                 
+%                 kt(dir,dir)=k;
+%                 kt(dir+6,dir+6)=k;
+%                 kt(dir,dir+6)=-k;
+%                 kt(dir,dit+6)=-k;
+%             end
+%             %坐标转化
+%             C=[obj.C66 zeros(6,6);obj.C66 zeros(6,6)];
+%             KT=C^-1*kt*C;
+        end
+        function InitialKT(obj)%初始化KTel Fsel nlstate
+            sz=length(obj.nds)*6;
+            obj.Fsel=zeros(sz,1);
+            
+            kt=zeros(12,12);
+            for it=1:length(obj.dir_nl)
+                dir=obj.dir_nl(it);%自由度
+                k=obj.prop_nl(it,1);
+                kt(dir,dir)=k;
+                kt(dir+6,dir+6)=k;
+                kt(dir,dir+6)=-k;
+                kt(dir,dir+6)=-k;
+                %初始化nlstate
+                obj.nlstate(it).ela=0;
+                obj.nlstate(it).dumax=obj.prop_nl(it,4);
+                obj.nlstate(it).dumin=-obj.prop_nl(it,4);
+                obj.nlstate(it).fs=0;
+                obj.nlstate(it).kt=0;
+                obj.nlstate(it).dv_NRhistory=[];
+            end
+            %坐标转化
+            C=[obj.C66 zeros(6,6);zeros(6,6) obj.C66 ];
+            obj.KTel=C^-1*kt*C;
+            
+            
+        end
+
     end
 end
 

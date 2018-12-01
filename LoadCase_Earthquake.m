@@ -15,8 +15,7 @@ classdef LoadCase_Earthquake<LoadCase
         C1 %在damp的make函数中生成
         R1 %质量影响列向量 引入边界条件后
 
-        dof%自由度数 未引入边界条件前
-        activeindex%有效自由度索引
+ 
         md%模态坐标 有时会用到
         deadf%恒载力向量 引入边界条件前 在bc中获得
     end
@@ -54,6 +53,9 @@ classdef LoadCase_Earthquake<LoadCase
             obj.ei=ei;
         end
         function Solve(obj)
+            %形成节点与刚度矩阵的映射
+            obj.f.node.SetupMapping();
+            
             obj.GetK();
             obj.GetM();
             obj.dof=size(obj.K,1);
@@ -92,6 +94,7 @@ classdef LoadCase_Earthquake<LoadCase
             
             for it=1:obj.f.manager_ele.num
                 e=obj.f.manager_ele.Get('index',it);
+                e.CalcHitbyele();
                 for it1=1:length(e.nds)
                     xh=obj.f.node.GetXuhaoByID(e.nds(it1));
                     hit(xh:xh+5)=hit(xh:xh+5)+e.hitbyele(it1,:)';%hit加1
@@ -168,8 +171,7 @@ classdef LoadCase_Earthquake<LoadCase
         function GetK(obj)
             %K是总刚度矩阵(边界条件处理前) 阶数为6*节点个数
             
-            %形成节点与刚度矩阵的映射
-            obj.f.node.SetupMapping();
+            
 
             
             

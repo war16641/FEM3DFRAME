@@ -10,7 +10,7 @@ classdef FEM3DFRAME <handle
         manager_ele %单元管理器
         manager_lc %工况管理器
 
-
+        flag_nl%标识这个工况是否是非线性默 认是线性的0
         
         
         K double%结构刚度矩阵 
@@ -24,6 +24,7 @@ classdef FEM3DFRAME <handle
             obj.manager_sec=HCM.HANDLE_CLASS_MANAGER_UNIQUE_SORTED('SECTION','name');
             obj.manager_ele=ELEMENT_MANAGER();
             obj.manager_lc=HCM.HANDLE_CLASS_MANAGER_UNIQUE('LoadCase','name');
+            obj.flag_nl=0;
         end
         
 
