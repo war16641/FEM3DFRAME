@@ -45,14 +45,15 @@ classdef LoadCase_MultStepStatic<LoadCase_Static
                 obj.rst.SetPointer();
             else%非线性结构
                 
+                f_node_origin=obj.f_node1;
                 for stepn=1:length(obj.tn)
-                    obj.f_node1=obj.f_node1*obj.scale(stepn);%改变外荷载
-                    u_all=obj.Script_NR();
-                    
+                    obj.f_node1=f_node_origin*obj.scale(stepn);%改变外荷载
+                    u_all=obj.Script_NR(obj.f_node1);
+                    obj.u=u_all;
                     %计算弹性部分力
-                    f=obj.K*u_all;
+                    f=obj.K*obj.u;
                     %添加结果
-                    obj.rst.AddTime(obj.tn(stepn),f,u_all);
+                    obj.rst.AddTime(obj.tn(stepn),f,obj.u);
                     
                 end
                 %初始化结果指针

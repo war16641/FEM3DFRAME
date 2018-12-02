@@ -151,6 +151,7 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
         end
         function [Fs,KT]=AddNRHistory(obj,varargin)
             %varargin是节点位移向量的增量
+            %flag_fail 为1 时代表nr失败
             %Fs是节点对单元的力 只含非线性部分
             %Fs是单元在nr过程中刚度 只含非线性部分
             ui=varargin{1}(1:6);
@@ -160,9 +161,27 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
             deform=deform_global'*cli;%局部变形的增量
             Fs=zeros(12,1);
             KT=zeros(12,12);
+            flag_fail=0;
             for it=1:length(obj.dir_nl)
                 dir=obj.dir_nl(it);
                 dv=deform(dir);%变形增量
+                
+                %检查不收敛条件
+                if isempty(obj.nlstate(it).dv_NRhistory)%第一次nr迭代
+                    if obj.nlstate(it).ela==1%受拉塑性
+                        delta_f=obj.prop_nl(it,3)*dv;%力增量
+                        if delta_f<-2*obj.prop_nl(it,4)*obj.prop_nl(it,3)&&delta_f>2*obj.prop_nl(it,4)*(obj.prop_nl(it,3)-obj.prop_nl(it,1))
+                            error('nr迭代：这种情况是nr迭代将在两个状态中来回切换。建议缩小步长')
+                        end
+                    end
+                    if obj.nlstate(it).ela==-1%受压塑性
+                        delta_f=obj.prop_nl(it,3)*dv;%力增量
+                        if delta_f>2*obj.prop_nl(it,2)*obj.prop_nl(it,3)&&delta_f<-2*obj.prop_nl(it,4)*(obj.prop_nl(it,3)-obj.prop_nl(it,1))
+                            error('nr迭代：这种情况是nr迭代将在两个状态中来回切换。建议缩小步长')
+                        end
+                    end
+                end
+                
                 obj.nlstate(it).dv_NRhistory=[obj.nlstate(it).dv_NRhistory; [dv 0 0 0]];
                 %计算fs和kt
                 k1=obj.prop_nl(it,1);

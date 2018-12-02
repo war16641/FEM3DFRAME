@@ -1159,3 +1159,64 @@ legend('fem','理论值')
 err=norm(vn-vn_tar);
 testcase.verifyTrue(err<0.001,'验证错误');
 end
+
+
+
+function test_verifymodel_29(testcase)%验证模型28 %验证多段非弹性
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,0,0,1.2);
+tmp=ELEMENT_SPRING(f,0,[1 2],[1.15 0.8 0 0 0 0]);
+tmp.SetNLProperty(1,[1 1 0.1]);
+f.manager_ele.Add(tmp);
+
+% f.manager_mat.Add(1,0.2,1,'concrete');
+% mat=f.manager_mat.GetByIdentifier('concrete');
+% sec=SECTION('ver',mat,1.1,3.1,4.1,13);
+% f.manager_sec.Add(sec);
+% tmp=ELEMENT_EULERBEAM(f,0,[1 2],sec);
+% f.manager_ele.Add(tmp);
+
+
+
+
+
+lc=[];
+lc=LoadCase_MultStepStatic(f,'dead1');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0;]);
+lc.AddBC('force',[2 3 1]);
+ew=EarthquakWave.MakeSin(1,1,1,0.05,1);
+lc.Set(ew.tn,ew.accn);
+lc.Solve();
+[vn,tn]=lc.rst.GetTimeHistory(0,1,'node','displ',2,3);%获取时程结果
+[fn,tn]=lc.rst.GetTimeHistory(0,1,'ele','force',1,'j',1);%获取时程结果
+vn_tar=[1
+4.090169944
+6.877852523
+9.090169944
+10.51056516
+11
+10.95105652
+10.80901699
+10.58778525
+10.30901699
+10
+9.690983006
+9.412214748
+9.190983006
+9.048943484
+9
+9.048943484
+9.190983006
+9.412214748
+9.690983006
+10
+];
+figure;
+plot(vn,fn)
+hold on
+plot(vn_tar,fn,'o');
+err=norm(vn-vn_tar);
+testcase.verifyTrue(err<0.001,'验证错误');
+end

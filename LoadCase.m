@@ -15,6 +15,8 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         f_node double%节点力 由f_ext+df组成
         f_node1 double
         u_beforesolve double%求解前的位移向量（全自由度的） 保存位移荷载
+        u double %求解后的位移向量 也可以说是 当前的位移向量（对于有多步荷载的工况） 全自由度
+        u1 double %有效自由度
         K double%结构刚度矩阵 处理边界条件前
         M double
         C double
@@ -82,6 +84,7 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
                 obj.u_beforesolve(index)=ln(3);%保存位移
                 displindex=[displindex index];
             end
+            obj.u=obj.u_beforesolve;%将当前位移置为求解前位移
             
             %处理未被单元激活自由度
             hit=zeros(obj.dof,1);%自由度被击中次数
