@@ -41,6 +41,8 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
             for it=1:lc.bc.displ.num
                 ln=lc.bc.displ.Get('index',it);
                 obj.AddBC('displ',ln);
+                
+                
             end
             for it=1:lc.bc.force.num
                 ln=lc.bc.force.Get('index',it);

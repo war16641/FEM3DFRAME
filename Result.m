@@ -18,7 +18,13 @@ classdef Result<handle
         function SetPointer(obj,frametype,framename)
             %frametype 可取'time' 'nontime'
             if nargin==1%没指定frametype,framename
-                obj.pointer=obj.nontimeframe.Get('index',1);%设置默认指针 为 非时间帧的第一个
+                if obj.nontimeframe.num~=0
+                    obj.pointer=obj.nontimeframe.Get('index',1);%设置默认指针 为 非时间帧的第一个
+                elseif obj.timeframe.num~=0
+                    obj.pointer=obj.timeframe.Get('index',1);%设置默认指针 为 时间帧的第一个
+                else
+                    error('没有结果帧')
+                end
                 return;
             end
             switch frametype(1)
