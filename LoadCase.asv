@@ -14,13 +14,11 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         f_ext1 double%映入边界条件
         f_node double%节点力 由f_ext+df组成
         f_node1 double
-        u_beforesolve double%求解前的位移向量（全自由度的） 保存位移荷载
+        u_beforesolve doubel%在
         K double%结构刚度矩阵 处理边界条件前
         M double
         C double
         K1 double%引入边界条件
-        M1
-        C1
         
     end
     
@@ -48,36 +46,27 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
             end
         end
         function PreSolve(obj)%执行solve前 每个工况都需要执行的代码
-            %纵自由度个数 所有自由度
-            obj.dof=6*obj.f.node.ndnum;
             %形成节点与刚度矩阵的映射
             obj.f.node.SetupMapping();
             %形成线性刚度矩阵K
             obj.GetK();
-            %形成M
-            obj.GetM();
-            %初始化非线性
-            for it=1:obj.f.manager_ele.num
-                e=obj.f.manager_ele.Get('index',it);
-                e.InitialKT();
-            end
             %检查边界条件是否重复
             obj.bc.Check();
-            
+            %纵自由度个数 所有自由度
+            obj.dof=6*obj.f.node.ndnum;
             %根据工况的需要检查自己的bc条件是否有问题 checkbc是每个工况都要重写的函数（虚函数）
-            obj.CheckBC();
+            obj.CheckBC(obj);
             %初始化activeindex
             obj.activeindex=1:obj.dof;
             
             %处理位移边界荷载
             df=zeros(obj.dof,1);%因删除位移荷载自由度而生成的额外力向量
             displindex=[];%存储不激活的自由度 位移限制的自由度
-            obj.u_beforesolve=zeros(obj.dof,1);%初始化求解前位移
             for it=1:obj.bc.displ.num
                 ln=obj.bc.displ.Get('index',it);
                 index=obj.f.node.GetXuhaoByID(ln(1))+ln(2)-1;%得到序号
                 df=df-obj.K(:,index)*ln(3);
-                obj.u_beforesolve(index)=ln(3);%保存位移
+                u(index)=ln(3);%保存位移
                 displindex=[displindex index];
             end
             
@@ -135,14 +124,12 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
             
             %生成K1 f_node1
             obj.K1=obj.K(obj.activeindex,obj.activeindex);
-            obj.M1=obj.M(obj.activeindex,obj.activeindex);
             obj.f_node1=obj.f_node(obj.activeindex);
         end
     end
     methods(Abstract)
         Solve(obj)
         GetK(obj)
-        GetM(obj)
         CheckBC(obj)
     end
 end

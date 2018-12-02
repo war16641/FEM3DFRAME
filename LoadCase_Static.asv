@@ -119,7 +119,7 @@ classdef LoadCase_Static<LoadCase
                 tol=1e-4;
                 Fs_n=zeros(obj.dof,1);
                 KT=zeros(obj.dof,obj.dof);
-                norm_f1=norm(obj.f_node1);%f1范数
+                norm_f1=norm(f1);%f1范数
                 %求起始Fs_n和KT
                 for it=1:obj.f.manager_ele.num
                     e=obj.f.manager_ele.Get('index',it);
@@ -132,7 +132,7 @@ classdef LoadCase_Static<LoadCase
                 while 1
                     KT1=KT(obj.activeindex,obj.activeindex);
                     Fs_n1=Fs_n(obj.activeindex);%有效ziyoudu
-                    R=obj.f_node1-obj.K1*u-Fs_n1;
+                    R=f1-K1*u-Fs_n1;
                     if norm(R)/norm_f1<tol%收敛
                         %结束nr状态
                         for it=1:obj.f.manager_ele.num
@@ -145,20 +145,20 @@ classdef LoadCase_Static<LoadCase
                         end
                         
                         %保存结果
-                        tmp=obj.u_beforesolve;
-                        tmp(obj.activeindex)=u;
-                        f=obj.K*tmp;
+                        tmp=
+                        u_all(obj.activeindex)=u;
+                        f=obj.K*u_all;
                         
                         %把结果保存到noderst
                         %static工况只有一个名为static的非时间结果
-                        obj.rst.AddNontime('static',f,tmp);
+                        obj.rst.AddNontime('static',f,u_all);
                         
                         %初始化结果指针
                         obj.rst.SetPointer();
                             
                         break;
                     else%不收敛
-                        du=(obj.K1+KT1)^-1*R;%增量
+                        du=(K1+KT1)^-1*R;%增量
                         u=u+du;
                         %重置
                         Fs_n=zeros(obj.dof,1);
@@ -205,10 +205,6 @@ classdef LoadCase_Static<LoadCase
         function CheckBC(obj)
             %静力工况对bc无额外要求
             return;
-        end
-        function GetM(obj)
-            %静力工况不需要M
-            obj.M=zeros(obj.dof,obj.dof);
         end
     end
 end
