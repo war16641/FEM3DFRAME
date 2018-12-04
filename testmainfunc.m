@@ -1220,3 +1220,150 @@ plot(vn_tar,fn,'o');
 err=norm(vn-vn_tar);
 testcase.verifyTrue(err<0.001,'验证错误');
 end
+
+
+
+function test_verifymodel_30(testcase)
+%测试 地震工况 三自由度 非线性spring
+
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1,0,0);
+f.node.AddByCartesian(3,2,0,0);
+f.node.AddByCartesian(4,3,0,0);
+m=267e3;
+
+tmp=ELEMENT_MASS(f,0,2,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,3,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,4,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+
+k1=1.75e9;k2=k1*0.1;fy=k1*1e-4;
+tmp=ELEMENT_SPRING(f,0,[1 2],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[2 3],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[3 4],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+
+
+
+
+
+lc=LoadCase_Earthquake(f,'eq');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+
+% ew=EarthquakWave();
+% ew.LoadFromFile('landers','g','F:\TOB\地震波\Landers.txt','time&acc',0);
+
+dt=load('wjj.mat','dz');
+dt=dt.dz;
+ew=EarthquakWave(dt(:,1),dt(:,2),'m/s^2','dz');
+ei=EarthquakeInput(lc,'landers',ew,1,0);
+lc.AddEarthquakeInput(ei);
+lc.SetAlgorithm('newmark',0.5,0.25);
+C1=[
+     2.6955e+006  -962.0010e+003     0.0000e+000
+  -962.0010e+003     2.6955e+006  -962.0010e+003
+     0.0000e+000  -962.0010e+003     1.7335e+006];
+ 
+lc.damp.Set('matrix',C1);
+lc.Solve();
+[u3,tn]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+figure
+plot(tn,u3)
+r=max(u3);
+testcase.verifyTrue(norm(r-0.0037219)<0.001,'验证错误');
+
+
+end
+
+function test_verifymodel_31(testcase)
+%乔普拉 EX16.2
+f=FEM3DFRAME();
+f.node.AddByCartesian(1,0,0,0);
+f.node.AddByCartesian(2,1,0,0);
+f.node.AddByCartesian(3,2,0,0);
+f.node.AddByCartesian(4,3,0,0);
+f.node.AddByCartesian(5,4,0,0);
+f.node.AddByCartesian(6,5,0,0);
+m=0.259;
+tmp=ELEMENT_MASS(f,0,2,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,3,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,4,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,5,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_MASS(f,0,6,[m m m 0 0 0]);
+f.manager_ele.Add(tmp);
+
+k1=100;
+k2=5;
+fy=125;
+tmp=ELEMENT_SPRING(f,0,[1 2],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[2 3],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[3 4],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[4 5],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+tmp=ELEMENT_SPRING(f,0,[5 6],[k1 0 0 0 0 0]);
+tmp.SetNLProperty(1,[k1 fy k2]);
+f.manager_ele.Add(tmp);
+
+
+
+% lc=LoadCase_Static(f,'dead');
+% f.manager_lc.Add(lc);
+% lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+% tmp=[2 1 125/15
+%     3  1  250/15
+%     4 1 375/15
+%     5 1 500/15
+%     6 1 625/15];
+% lc.AddBC('force',tmp);
+% lc.Solve();
+% r=[lc.rst.Get('node','displ',2,1)
+%     lc.rst.Get('node','displ',3,1)
+%     lc.rst.Get('node','displ',4,1)
+%     lc.rst.Get('node','displ',5,1)
+%     lc.rst.Get('node','displ',6,1)]
+
+lc=LoadCase_MultStepStatic(f,'dead');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+tmp=[2 1 125/15
+    3  1  250/15
+    4 1 375/15
+    5 1 500/15
+    6 1 625/15];
+lc.AddBC('force',tmp);
+scale=[0 1 1.1 1.2 1.3 1.4 1.5 1.6];
+tn=1:length(scale);tn=tn';
+lc.Set(tn,scale);
+lc.Solve();
+r1=lc.rst.GetTimeHistory(0,20,'node','displ',2,1);
+r1_tar=[     0.0000e+000
+     1.2500e+000
+     3.7500e+000
+     6.2500e+000
+     8.7500e+000
+    11.2500e+000
+    13.7500e+000
+    16.2500e+000];
+err=norm(r1-r1_tar);
+testcase.verifyTrue(err<0.001,'验证错误');
+end

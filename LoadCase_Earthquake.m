@@ -250,6 +250,14 @@ classdef LoadCase_Earthquake<LoadCase
 % 
 %         end
         function [v, dv, ddv ]=Newmark(obj)
+            if obj.f.flag_nl==0%线性结构
+                [v, dv, ddv ]=obj.Newmark_L();
+            else
+                [v, dv, ddv ]=obj.Newmark_NL();
+            end
+
+        end
+        function [v, dv, ddv ]=Newmark_L(obj)%线性的
             %newmark-β法求解多自由度动力响应 在地震作用下
             %要求结构是线性 K矩阵不变
             %算法参见《有限单元法》王 P480
@@ -266,7 +274,7 @@ classdef LoadCase_Earthquake<LoadCase
             tmp=size(K,1);
             v0=obj.intd.u0(obj.activeindex);
             dv0=zeros(tmp,1);
-%             ddv0=zeros(tmp,1);
+            %             ddv0=zeros(tmp,1);
             gamma=obj.arg{1};
             beta=obj.arg{2};
             time=obj.ei.tn;
@@ -311,7 +319,7 @@ classdef LoadCase_Earthquake<LoadCase
             v=[ zeros(n,len)];v(:,1)=v0;
             dv=[zeros(n,len)];dv(:,1)=dv0;
             ddv=[zeros(n,len)];ddv0=M^-1*(F(:,1)-C*dv0-K*v0);ddv(:,1)=ddv0;
-
+            
             
             %载入初始位移
             u(obj.activeindex)=v0;
@@ -327,7 +335,7 @@ classdef LoadCase_Earthquake<LoadCase
                 ddv(:,it)=c0*(v(:,it)-v(:,it-1))-c2*dv(:,it-1)-c3*ddv(:,it-1);%加速度
                 dv(:,it)=dv(:,it-1)+c6*ddv(:,it-1)+c7*ddv(:,it);
                 
-
+                
                 wb.text=['时程工况计算' num2str(it) '/' num2str(len)];
                 wb.x=it/len;
                 %将当前步的计算结果保存到fem中
@@ -336,10 +344,105 @@ classdef LoadCase_Earthquake<LoadCase
                 u_tt(obj.activeindex)=ddv(:,it);
                 f=obj.K*u;%结构的受力
                 obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
-
+                
             end
             wb.Close();
+        end
+        function [v, dv, ddv ]=Newmark_NL(obj)%非线性
+             %newmark-β法求解多自由度动力响应 在地震作用下
+            %要求结构是线性 K矩阵不变
+            %算法参见《有限单元法》王 P480
+            %K,M,C三个矩阵
+            %v0是列向量 每个自由度上的初始位移 dv0 ddv0初始速度和加速度
+            %F是矩阵 代表每个自由度上的力 一列代表某一时刻结构所受到的力 注意 F的列数与 time的列数相等 F第k列对应于t=（k-1)*dt时受力 F的第一列(0时刻)不重要
+            %gamma beta两个参数 0.5,0.25常加速度
+            %time 时间向量 与 F 对应 等差数列
+            K=obj.K1;
+            M=obj.M1;
+            C=obj.C1;
+            R=obj.R1;
+            deadf1=obj.f_ext(obj.activeindex);%恒载 有效自由度
+            tmp=size(K,1);
+            v0=obj.intd.u0(obj.activeindex);
+            dv0=zeros(tmp,1);
+            %             ddv0=zeros(tmp,1);
+            gamma=obj.arg{1};
+            beta=obj.arg{2};
+            time=obj.ei.tn;
+            
+            
+            
+            
+            n=size(K,1);%自由度个数
+            dt=time(2)-time(1);
+            
+            %% 检查gamma和beta的参数是否满足要求
+            if gamma<0.5||beta<0.25*(0.5+gamma)^2
+                %     error('参数gamma和beta不满足要求');
+            end
+            %% 将地面加速度转化为等效节点荷载
+            timelen=length(time);
+            F=zeros(n,timelen);
+            for it=1:timelen
+                F(:,it)=-M*R*obj.ei.accn(:,it)+deadf1;%这里记得加上恒载力
+            end
+            %% 常数的计算
+            c0=1/beta/dt^2;
+            c1=gamma/beta/dt;
+            c2=1/beta/dt;
+            c3=1/2/beta-1;
+            c4=gamma/beta-1;
+            c5=dt/2*(gamma/beta-2);
+            c6=dt*(1-gamma);
+            c7=gamma*dt;
+            c_1=M*c0+C*c1;
+            c_2=M*c2+C*c4;
+            c_3=M*c3+C*c5;
+            %%
+            Kpa=K+c0*M+c1*C;
+            Kpali=Kpa^-1;
+            u=obj.u_beforesolve;%结构的位移列向量  都是0
+            u_t=u;
+            u_tt=u;
+            %% 循环求解部分
+            %计算初始的位移速度加速度
+            len=length(time);
+            v=[ zeros(n,len)];v(:,1)=v0;
+            dv=[zeros(n,len)];dv(:,1)=dv0;
+            ddv=[zeros(n,len)];ddv0=M^-1*(F(:,1)-C*dv0-K*v0);ddv(:,1)=ddv0;
+            
+            
+            %载入初始位移
+            u(obj.activeindex)=v0;
+            u_t(obj.activeindex)=dv0;
+            u_tt(obj.activeindex)=ddv0;
+            %计算附加刚度矩阵
+            Kadd=c0*M+c1*C;
 
+            obj.rst.AddTime(time(1),obj.K*u,u);%写入第一步的结果
+            wb=MyWaitbar('时程工况计算','FEM3DFRAME');
+            for it=2:len%it是当前要算的 即目标步 已经算到it-1 即上一步
+                %计算等效力
+                Fpa=F(:,it)+c_1*v(:,it-1)+c_2*dv(:,it-1)+c_3*ddv(:,it-1);
+                [v_all]=LoadCase_Static.Script_NR(obj,Fpa,Kadd);%使用nr求解位移
+                obj.u=v_all;%保存结果到模型
+                v_all=v_all(obj.activeindex);
+                v(:,it)=v_all;
+                ddv(:,it)=c0*(v(:,it)-v(:,it-1))-c2*dv(:,it-1)-c3*ddv(:,it-1);%加速度
+                dv(:,it)=dv(:,it-1)+c6*ddv(:,it-1)+c7*ddv(:,it);
+                
+                
+                wb.text=['时程工况计算' num2str(it) '/' num2str(len)];
+                wb.x=it/len;
+                %将当前步的计算结果保存到fem中
+                u(obj.activeindex)=v(:,it);%结构的位移列向量
+                u_t(obj.activeindex)=dv(:,it);
+                u_tt(obj.activeindex)=ddv(:,it);
+                f=obj.K*u;%结构的受力
+                obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
+                
+            end
+            wb.Close();
         end
     end
 end

@@ -88,9 +88,11 @@ classdef ELEMENT_MASS<ELEMENT3DFRAME
             
         end
         function InitialKT(obj)%³õÊ¼»¯KTel Fsel
+            
             sz=length(obj.nds)*6;
             obj.Fsel=zeros(sz,1);
             obj.KTel=zeros(sz,sz);
+            
         end
     end
 end

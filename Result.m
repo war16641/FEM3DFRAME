@@ -63,6 +63,9 @@ classdef Result<handle
             end
             [ind1,index1]=obj.timeframe.FindId(t1);
             [ind2,index2]=obj.timeframe.FindId(t2);%查找起始和结束结果序号
+            if index1==0
+                index1=1;
+            end
             index1=max([ind1 index1]);
             index2=max([ind2 index2]);
             numline=index2-index1+1;%结果帧个数

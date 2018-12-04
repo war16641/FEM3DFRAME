@@ -43,6 +43,7 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
             obj.Fsel=zeros(6*tmp,1);
             %初始化有效自由度矩阵
             obj.hitbyele=zeros(length(obj.nds),6);
+            obj.Mel=zeros(6*length(nds),6*length(nds));%默认质量矩阵为零
 
         end
         function set.flag_nl(obj,v)

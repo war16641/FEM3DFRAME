@@ -48,7 +48,7 @@ classdef LoadCase_MultStepStatic<LoadCase_Static
                 f_node_origin=obj.f_node1;
                 for stepn=1:length(obj.tn)
                     obj.f_node1=f_node_origin*obj.scale(stepn);%改变外荷载
-                    u_all=obj.Script_NR(obj.f_node1);
+                    u_all=obj.Script_NR(obj,obj.f_node1);
                     obj.u=u_all;
                     %计算弹性部分力
                     f=obj.K*obj.u;

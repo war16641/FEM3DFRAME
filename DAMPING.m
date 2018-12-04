@@ -25,6 +25,9 @@ classdef DAMPING<handle
                         error('matlab:myerror','瑞利阻尼梁参数')
                     end
                     obj.arg=varargin(2:end);
+                case 'matrix'%直接指定C1
+                    obj.typename='matrix';
+                    obj.arg=varargin(2);
                 otherwise
                     error('matlab:myerror','未知阻尼类型')
             end
@@ -34,7 +37,8 @@ classdef DAMPING<handle
             switch obj.typename
                 case 'rayleigh'%瑞利阻尼
                     obj.lc.C1=obj.arg{1}*obj.lc.M1+obj.arg{2}*obj.lc.K1;
-                    
+                case 'matrix'%直接指定C1
+                    obj.lc.C1=obj.arg{1};
                 otherwise
                     error('matlab:myerror','未知阻尼类型')
             end

@@ -224,13 +224,18 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
             for it=1:length(obj.dir_nl)
                 dir=obj.dir_nl(it);
                 %将nr过程中最后一步载入到nlstate中
-                obj.nlstate(it).fs=obj.nlstate(it).dv_NRhistory(end,2);
-                obj.nlstate(it).kt=obj.nlstate(it).dv_NRhistory(end,3);
-                obj.nlstate(it).ela=obj.nlstate(it).dv_NRhistory(end,4);
+                if ~isempty(obj.nlstate(it).dv_NRhistory)
+                    obj.nlstate(it).fs=obj.nlstate(it).dv_NRhistory(end,2);
+                    obj.nlstate(it).kt=obj.nlstate(it).dv_NRhistory(end,3);
+                    obj.nlstate(it).ela=obj.nlstate(it).dv_NRhistory(end,4);
+                    %清除nrhistory信息
+                    obj.nlstate(it).dv_NRhistory=[];
+                else%如果nrhistory为空 说明 这一步的荷载和上一步一样 什么都不用动
+                end
+                
                 obj.nlstate(it).dumax=(1-obj.nlstate(it).ela)*obj.prop_nl(it,4);
                 obj.nlstate(it).dumin=(-1-obj.nlstate(it).ela)*obj.prop_nl(it,4);
-                %清除nrhistory信息
-                obj.nlstate(it).dv_NRhistory=[];
+                
                 %输出切线矩阵 只含线性 节点力
                 fs=obj.nlstate(it).fs;
                 kt=obj.nlstate(it).kt;
@@ -273,8 +278,7 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
         end
         function InitialKT(obj)%初始化KTel Fsel nlstate
             sz=length(obj.nds)*6;
-            obj.Fsel=zeros(sz,1);
-            
+            obj.Fsel=zeros(sz,1);%初始化的fsel为0
             kt=zeros(12,12);
             for it=1:length(obj.dir_nl)
                 dir=obj.dir_nl(it);%自由度
@@ -282,13 +286,13 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
                 kt(dir,dir)=k;
                 kt(dir+6,dir+6)=k;
                 kt(dir,dir+6)=-k;
-                kt(dir,dir+6)=-k;
+                kt(dir+6,dir)=-k;
                 %初始化nlstate
                 obj.nlstate(it).ela=0;
                 obj.nlstate(it).dumax=obj.prop_nl(it,4);
                 obj.nlstate(it).dumin=-obj.prop_nl(it,4);
                 obj.nlstate(it).fs=0;
-                obj.nlstate(it).kt=0;
+                obj.nlstate(it).kt=obj.prop_nl(it,1);
                 obj.nlstate(it).dv_NRhistory=[];
             end
             %坐标转化
