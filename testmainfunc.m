@@ -734,6 +734,23 @@ lc.Solve();
 [vn,tn]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
 testcase.verifyTrue(norm(max(vn)-1.0106e-003)<0.001,'验证错误');
 
+lc=LoadCase_Earthquake(f,'eq1');
+f.manager_lc.Add(lc);
+lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+ei=EarthquakeInput(lc,'landers',ew,1,0);
+lc.AddEarthquakeInput(ei);
+lc.SetAlgorithm('central');
+[a, b]=DAMPING.RayleighDamping(w1,w2,0.05,0.05);
+lc.damp.Set('rayleigh',a,b);
+lc.Solve();
+[vn1,tn1]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+figure
+plot(tn,vn)
+hold on
+plot(tn1,vn1,'o')
+legend('newamrk','central')
+err=norm(vn1-vn)/sqrt(length(vn));
+testcase.verifyTrue(err<0.00005,'验证错误');
 
 end
 
@@ -797,6 +814,21 @@ plot(tn,-v_v,'+','markersize',3);
 legend('fem','精确值');
 er=v_v'+vn;
 testcase.verifyTrue(norm(er)<0.002,'验证错误');
+
+%中心差分法
+lc=LoadCase_Earthquake(f,'eq1');
+f.manager_lc.Add(lc);
+lc.CloneBC(lc1);
+ew=EarthquakWave.MakeSin(2/2/pi,1,10,0.01);
+ei=EarthquakeInput(lc,'sin',ew,1,0);
+lc.AddEarthquakeInput(ei);
+lc.SetAlgorithm('central');
+[a, b]=DAMPING.RayleighDamping(w1,5,0.005,0.005);
+lc.damp.Set('rayleigh',a,b);
+lc.Solve();
+[vn1,tn1]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+err=norm(vn1-vn);
+testcase.verifyTrue(err<0.002,'验证错误');
 end
 function test_verifymodel_22(testcase)
 %测试 初始位移
@@ -842,6 +874,8 @@ lc.Solve();
 figure
 plot(tn,vn)
 
+
+
 %解析解
 [v]=dsolve('D2y+0.01*Dy+y=0','Dy(0)=0','y(0)=1');
 syms t
@@ -849,10 +883,30 @@ v_v=subs(v,t,[0:0.01:20]);
 v_v=double(v_v);
 hold on
 plot(0:0.01:20,v_v,'o','markersize',2);
-legend('fem','解析解')
+
 er=norm(vn-v_v');
 
 testcase.verifyTrue(er/2001<0.002,'验证错误');
+
+%中心差分法
+lc=LoadCase_Earthquake(f,'eq1');
+f.manager_lc.Add(lc);
+lc.CloneBC(lc1);
+lc.intd.Add([2 1 1])
+
+ew=EarthquakWave.MakeConstant(0,20,0.01);
+ei=EarthquakeInput(lc,'const',ew,1,0);
+lc.AddEarthquakeInput(ei);
+lc.SetAlgorithm('central');
+[a, b]=DAMPING.RayleighDamping(w1,5,0.005,0.005);
+
+lc.damp.Set('rayleigh',a,b);
+lc.Solve();
+[vn1,tn1]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+err=norm(vn-vn1)/sqrt(length(vn));
+plot(tn1,vn1);
+legend('newmark','解析解','central')
+testcase.verifyTrue(err<0.001,'验证错误');
 end
 function test_verifymodel_23(testcase)
 %测试 模态坐标 同时验证当初位移为第三阵型时，是否其他模态坐标为0
@@ -962,11 +1016,6 @@ lcd.Solve();
 lc=LoadCase_Earthquake(f,'eq');
 f.manager_lc.Add(lc);
 lc.CloneBC(lcd);
-
-% lc.intd.Add([2 1 1])
-
-
-
 ew=EarthquakWave.MakeConstant(0,20,0.01);
 ei=EarthquakeInput(lc,'const',ew,1,0);
 lc.AddEarthquakeInput(ei);
@@ -986,10 +1035,28 @@ v_v=subs(v,t,[0:0.01:20]);
 v_v=double(v_v);
 hold on
 plot(0:0.01:20,v_v,'o','markersize',2);
-legend('fem','解析解')
+
 er=norm(vn-v_v');
 
 testcase.verifyTrue(er/2001<0.002,'验证错误');
+
+%中心差分法
+lc=LoadCase_Earthquake(f,'eq1');
+f.manager_lc.Add(lc);
+lc.CloneBC(lcd);
+ew=EarthquakWave.MakeConstant(0,20,0.01);
+ei=EarthquakeInput(lc,'const',ew,1,0);
+lc.AddEarthquakeInput(ei);
+lc.SetAlgorithm('central');
+[a, b]=DAMPING.RayleighDamping(w1,5,0.005,0.005);
+
+lc.damp.Set('rayleigh',a,b);
+lc.Solve();
+[vn1,tn1]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+plot(tn1,vn1);
+legend('newmark','解析解','central')
+err=norm(vn-vn1)/sqrt(length(vn));
+testcase.verifyTrue(err<0.001,'验证错误');
 end
 function test_verifymodel_25(testcase)
 %测试 恒载力+初位移

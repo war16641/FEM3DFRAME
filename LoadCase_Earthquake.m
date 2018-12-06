@@ -42,6 +42,10 @@ classdef LoadCase_Earthquake<LoadCase
                     end
                     obj.func=@obj.Newmark;
                     obj.arg=varargin(2:end);
+                case 'central'%中心差分
+                    obj.algorithm='central';
+                    obj.func=@obj.CentralDifferenceMethod;
+                    obj.arg={};
                 otherwise
                     error('matlab:myerror','未知算法')
             end
@@ -443,6 +447,96 @@ classdef LoadCase_Earthquake<LoadCase
                 
             end
             wb.Close();
+        end
+        function [v,dv,ddv]=CentralDifferenceMethod(obj)
+            if obj.f.flag_nl==0%线性结构
+                [v, dv, ddv ]=obj.CentralDifferenceMethod_L();
+            else
+                [v, dv, ddv ]=obj.CentralDifferenceMethod_NL();
+            end
+        end
+        function [v, dv, ddv ]=CentralDifferenceMethod_L(obj)
+            %中心差分法 《有限单元法》 王P477
+            %K,M,C刚度质量阻尼矩阵 不随时间变化
+            %v0,dv0,ddv0初始时刻（t=0)时的位移速度加速度 这三者会成为输出的v dv ddv的第一列
+            %F第k列对应于t=（k-1)*dt时受力 F的列数与 time的列数相等
+            %time 时间向量 等差数列
+            K=obj.K1;
+            M=obj.M1;
+            C=obj.C1;
+            R=obj.R1;
+            deadf1=obj.f_ext(obj.activeindex);%恒载 有效自由度
+             n=size(obj.K1,1);
+            time=obj.ei.tn;
+            dt=time(2)-time(1);
+            u=obj.u_beforesolve;%结构的位移列向量  都是0
+            u_t=u;
+            u_tt=u;
+            v0=obj.intd.u0(obj.activeindex);
+            dv0=zeros(n,1);
+               % 将地面加速度转化为等效节点荷载
+            timelen=length(time);
+            F=zeros(n,timelen);
+            for it=1:timelen
+                F(:,it)=-M*R*obj.ei.accn(:,it)+deadf1;%这里记得加上恒载力
+            end
+           
+            % 计算常数
+            c0=1/dt^2;c1=1/2/dt;c2=2*c0;c3=1/c2;
+            
+           
+            %
+            Mjian=c0*M+c1*C;
+            Mjianli=Mjian^-1;
+            %
+            len=length(time);
+            v=zeros(n,len);dv=v;ddv=v;
+            %
+            wb=MyWaitbar('时程工况计算','FEM3DFRAME');
+            %计算第一步
+            v(:,1)=v0;
+            dv(:,1)=dv0;
+            ddv0=M^-1*(F(:,1)-C*dv0-K*v0);
+            ddv(:,1)=ddv0;
+            u(obj.activeindex)=v(:,1);%结构的位移列向量
+            u_t(obj.activeindex)=dv(:,1);
+            u_tt(obj.activeindex)=ddv(:,1);
+            f=obj.K*u;%结构的受力
+            obj.rst.AddTime(time(1),f,u,u_t,u_tt);%保存结果
+            
+             % 计算v -dt
+            vf=v0-dt*dv0+c3*ddv0;
+            
+            Fjian=F(:,1)-(K-c2*M)*v0-(c0*M-c1*C)*vf;
+            v(:,2)=Mjianli*Fjian;
+            for it=2:len-1 %对应于计算t=(k-1)dt时的
+                Fjian=F(:,it)-(K-c2*M)*v(:,it)-(c0*M-c1*C)*v(:,it-1);
+                v(:,it+1)=Mjianli*Fjian;
+                ddv(:,it)=c0*(v(:,it-1)-2*v(:,it)+v(:,it+1));
+                dv(:,it)=c1*(-v(:,it-1)+v(:,it+1));%用前后一步的位移 算当前步的速度和加速度
+                
+                %更新wb
+                wb.text=['时程工况计算' num2str(it) '/' num2str(len)];
+                wb.x=it/len;
+                
+                %写入结果
+                u(obj.activeindex)=v(:,it);%结构的位移列向量
+                u_t(obj.activeindex)=dv(:,it);
+                u_tt(obj.activeindex)=ddv(:,it);
+                f=obj.K*u;%结构的受力
+                obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
+            end
+            
+            
+            %计算最后一步的速度 加速度 暂缺
+             u(obj.activeindex)=v(:,len);%结构的位移列向量
+             u_t(obj.activeindex)=dv(:,len);
+             u_tt(obj.activeindex)=ddv(:,len);
+             f=obj.K*u;%结构的受力
+             obj.rst.AddTime(time(len),f,u,u_t,u_tt);%保存结果
+             
+             %关闭wb
+             wb.Close();
         end
     end
 end
