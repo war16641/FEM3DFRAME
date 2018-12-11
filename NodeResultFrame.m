@@ -112,22 +112,31 @@ properties
             end
             
         end
-%         function disp(obj)
-%             disp(['节点结果帧' obj.framename])
-%             disp(['属于工况' obj.nc.lc.name])
-%             disp('打印力信息>>>>>>>>>>')
-%             disp([sprintf('%10s','节点') sprintf('%10s%10s%10s%10s%10s%10s','fx','fy','fz','mx','my','mz')]);
-%             for it=1:obj.force.num
-%                 [ln,id]=obj.force.Get('index',it);
-%                 disp([sprintf('%10d% 10.2e% 10.2e% 10.2e% 10.2e% 10.2e% 10.2e',id,ln(1),ln(2),ln(3),ln(4),ln(5),ln(6))]);
-%             end
-%             disp('打印位移信息>>>>>>>>>>')
-%             disp([sprintf('%10s','节点') sprintf('%10s%10s%10s%10s%10s%10s','ux','uy','uz','rx','ry','rz')]);
-%             for it=1:obj.force.num
-%                 [ln,id]=obj.displ.Get('index',it);
-%                 disp([sprintf('%10d% 10.2e% 10.2e% 10.2e% 10.2e% 10.2e% 10.2e',id,ln(1),ln(2),ln(3),ln(4),ln(5),ln(6))]);
-%             end
-%         end
+        function LoadFromState(obj)
+            lc=obj.rf.rst.lc;
+            
+            for it=1:lc.f.node.nds.num
+                [~,ndid]=lc.f.node.nds.Get('index',it);%获取节点编号
+                xh=lc.f.node.GetXuhaoByID(ndid);%获取节点对应的矩阵序号
+                
+                %写入位移结果
+                tmp=lc.u(xh:xh+5);
+                tmp=tmp';
+                obj.displ.Add(ndid,tmp);
+                %写入力结果
+                tmp=lc.f_ele(xh:xh+5);
+                tmp=tmp';
+                obj.force.Add(ndid,tmp);
+                %写入速度
+                tmp=lc.du(xh:xh+5);
+                tmp=tmp';
+                obj.displ_t.Add(ndid,tmp);
+                %写入加速度
+                tmp=lc.ddu(xh:xh+5);
+                tmp=tmp';
+                obj.displ_tt.Add(ndid,tmp);
+            end
+        end
 
     end
     methods(Access=private)

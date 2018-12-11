@@ -29,9 +29,10 @@ classdef LoadCase_Modal<LoadCase
             for it=1:length(obj.w)%这一块循环有点花时间
                 w1=obj.w(it);
                 mode1=obj.mode(:,it);
-                u1(obj.activeindex)=mode1;
-                f1=obj.K*u1;
-                obj.rst.Add(it,w1,f1,u1);
+                obj.SetState(mode1);
+%                 u1(obj.activeindex)=mode1;
+%                 f1=obj.K*u1;
+                obj.rst.Add(it,w1,[],[]);
             end
             toc
 

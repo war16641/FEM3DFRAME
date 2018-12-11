@@ -326,11 +326,12 @@ classdef LoadCase_Earthquake<LoadCase
             
             
             %载入初始位移
-            u(obj.activeindex)=v0;
-            u_t(obj.activeindex)=dv0;
-            u_tt(obj.activeindex)=ddv0;
-            %计算增量
-            obj.rst.AddTime(time(1),obj.K*u,u);%写入第一步的结果
+%             u(obj.activeindex)=v0;
+%             u_t(obj.activeindex)=dv0;
+%             u_tt(obj.activeindex)=ddv0;
+            obj.SetState(v0,dv0,ddv0);
+            obj.rst.AddByState(time(1),'time');%写入第一步的结果
+            
             wb=MyWaitbar('时程工况计算','FEM3DFRAME');
             for it=2:len%it是当前要算的 即目标步 已经算到it-1 即上一步
                 %计算等效力
@@ -343,11 +344,9 @@ classdef LoadCase_Earthquake<LoadCase
                 wb.text=['时程工况计算' num2str(it) '/' num2str(len)];
                 wb.x=it/len;
                 %将当前步的计算结果保存到fem中
-                u(obj.activeindex)=v(:,it);%结构的位移列向量
-                u_t(obj.activeindex)=dv(:,it);
-                u_tt(obj.activeindex)=ddv(:,it);
-                f=obj.K*u;%结构的受力
-                obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
+                obj.SetState(v(:,it),dv(:,it),ddv(:,it));
+                obj.rst.AddByState(time(it),'time');
+%                 obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
                 
             end
             wb.Close();
@@ -417,19 +416,20 @@ classdef LoadCase_Earthquake<LoadCase
             
             
             %载入初始位移
-            u(obj.activeindex)=v0;
-            u_t(obj.activeindex)=dv0;
-            u_tt(obj.activeindex)=ddv0;
+            obj.SetState(v0,dv0,ddv0);
+            obj.rst.AddByState(time(1),'time');
             %计算附加刚度矩阵
             Kadd=c0*M+c1*C;
 
-            obj.rst.AddTime(time(1),obj.K*u,u);%写入第一步的结果
+%             obj.rst.AddTime(time(1),obj.K*u,u);%写入第一步的结果
             wb=MyWaitbar('时程工况计算','FEM3DFRAME');
             for it=2:len%it是当前要算的 即目标步 已经算到it-1 即上一步
                 %计算等效力
                 Fpa=F(:,it)+c_1*v(:,it-1)+c_2*dv(:,it-1)+c_3*ddv(:,it-1);
                 [v_all]=LoadCase_Static.Script_NR(obj,Fpa,Kadd);%使用nr求解位移
-                obj.u=v_all;%保存结果到模型
+                
+                
+%                 obj.u=v_all;%保存结果到模型
                 v_all=v_all(obj.activeindex);
                 v(:,it)=v_all;
                 ddv(:,it)=c0*(v(:,it)-v(:,it-1))-c2*dv(:,it-1)-c3*ddv(:,it-1);%加速度
@@ -439,11 +439,14 @@ classdef LoadCase_Earthquake<LoadCase
                 wb.text=['时程工况计算' num2str(it) '/' num2str(len)];
                 wb.x=it/len;
                 %将当前步的计算结果保存到fem中
-                u(obj.activeindex)=v(:,it);%结构的位移列向量
-                u_t(obj.activeindex)=dv(:,it);
-                u_tt(obj.activeindex)=ddv(:,it);
-                f=obj.K*u;%结构的受力
-                obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
+                obj.SetState(v(:,it),dv(:,it),ddv(:,it));
+                obj.rst.AddByState(time(it),'time');
+                
+%                 u(obj.activeindex)=v(:,it);%结构的位移列向量
+%                 u_t(obj.activeindex)=dv(:,it);
+%                 u_tt(obj.activeindex)=ddv(:,it);
+%                 f=obj.K*u;%结构的受力
+%                 obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
                 
             end
             wb.Close();
@@ -498,11 +501,10 @@ classdef LoadCase_Earthquake<LoadCase
             dv(:,1)=dv0;
             ddv0=M^-1*(F(:,1)-C*dv0-K*v0);
             ddv(:,1)=ddv0;
-            u(obj.activeindex)=v(:,1);%结构的位移列向量
-            u_t(obj.activeindex)=dv(:,1);
-            u_tt(obj.activeindex)=ddv(:,1);
-            f=obj.K*u;%结构的受力
-            obj.rst.AddTime(time(1),f,u,u_t,u_tt);%保存结果
+            obj.SetState(v0,dv0,ddv0);
+            obj.rst.AddByState(time(1),'time');%写入第一步的结果
+            
+   
             
              % 计算v -dt
             vf=v0-dt*dv0+c3*ddv0;
@@ -520,20 +522,16 @@ classdef LoadCase_Earthquake<LoadCase
                 wb.x=it/len;
                 
                 %写入结果
-                u(obj.activeindex)=v(:,it);%结构的位移列向量
-                u_t(obj.activeindex)=dv(:,it);
-                u_tt(obj.activeindex)=ddv(:,it);
-                f=obj.K*u;%结构的受力
-                obj.rst.AddTime(time(it),f,u,u_t,u_tt);%保存结果
+                
+                obj.SetState(v(:,it),dv(:,it),ddv(:,it));
+                obj.rst.AddByState(time(it),'time');
             end
             
             
             %计算最后一步的速度 加速度 暂缺
-             u(obj.activeindex)=v(:,len);%结构的位移列向量
-             u_t(obj.activeindex)=dv(:,len);
-             u_tt(obj.activeindex)=ddv(:,len);
-             f=obj.K*u;%结构的受力
-             obj.rst.AddTime(time(len),f,u,u_t,u_tt);%保存结果
+ 
+             obj.SetState(v(:,len));%这里是有问题的 没有输入速度和加速度
+             obj.rst.AddByState(time(len),'time');%保存结果
              
              %关闭wb
              wb.Close();

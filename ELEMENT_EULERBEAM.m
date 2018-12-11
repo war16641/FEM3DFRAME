@@ -223,6 +223,9 @@ classdef ELEMENT_EULERBEAM<ELEMENT3DFRAME
             obj.Fsel=zeros(sz,1);
             obj.KTel=zeros(sz,sz);
         end
+        function SetState(obj,varargin)
+            SetState@ELEMENT3DFRAME(obj,varargin);
+        end
     end
     methods(Static)
         function InitializeDir(obj,p)%初始化xdir ydir zdir三个向量 此函数的作用时给具有方向的单元（梁 连接单元）一个默认的方向

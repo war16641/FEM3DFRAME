@@ -19,13 +19,12 @@ classdef LoadCase_Static<LoadCase
                 u1=obj.K1\obj.f_node1;
                 
                 %处理求解后所有自由度上的力和位移
-                u=obj.u_beforesolve;
-                u(obj.activeindex)=u1;
-                f=obj.K*u;
+                obj.SetState(u1);
                 
                 %把结果保存到noderst
                 %static工况只有一个名为static的非时间结果
-                obj.rst.AddNontime('static',f,u);
+                obj.rst.AddByState('static','nontime');
+
                 
                 %初始化结果指针
                 obj.rst.SetPointer();
@@ -34,12 +33,18 @@ classdef LoadCase_Static<LoadCase
                 obj.CheckBC1();
                 u_all=obj.Script_NR(obj,obj.f_node1);
                 
-                obj.u=u_all;
-                %计算弹性部分力
-                f=obj.K*obj.u;
-                %把结果保存到rst
-                %static工况只有一个名为static的非时间结果
-                obj.rst.AddNontime('static',f,obj.u);
+                %保存到lc中
+                obj.SetState(u_all(obj.activeindex));
+                
+                %保存结果
+                obj.rst.AddByState('static','nontime');
+                
+%                 obj.u=u_all;
+%                 %计算弹性部分力
+%                 f=obj.K*obj.u;
+%                 %把结果保存到rst
+%                 %static工况只有一个名为static的非时间结果
+%                 obj.rst.AddNontime('static',f,obj.u);
                 
                 %初始化结果指针
                 obj.rst.SetPointer();

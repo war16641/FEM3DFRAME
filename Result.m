@@ -45,6 +45,18 @@ classdef Result<handle
             tmp=ResultFrame(idname,obj,varargin);
             obj.timeframe.Add(idname,tmp);
         end
+        function AddByState(obj,framename,type)
+            tmp=ResultFrame(framename,obj);
+            tmp.LoadFromState();
+            switch type
+                case 'time'
+                    obj.timeframe.Add(framename,tmp,0);
+                case 'nontime'
+                    obj.nontimeframe.Add(framename,tmp);
+                otherwise
+                    error('sd')
+            end
+        end
         function r = Get(obj,varargin)
             %rst_type node Лђеп ele
             %rst_type='node'    type='force' 'displ'

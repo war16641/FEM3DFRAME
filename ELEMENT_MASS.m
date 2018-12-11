@@ -94,6 +94,9 @@ classdef ELEMENT_MASS<ELEMENT3DFRAME
             obj.KTel=zeros(sz,sz);
             
         end
+        function SetState(obj,varargin)
+            SetState@ELEMENT3DFRAME(obj,varargin);
+        end
     end
 end
 

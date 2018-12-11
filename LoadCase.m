@@ -14,9 +14,14 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         f_ext1 double%映入边界条件
         f_node double%节点力 由f_ext+df组成
         f_node1 double
+        f_ele%节点受单元的力 全自由度
         u_beforesolve double%求解前的位移向量（全自由度的） 保存位移荷载
         u double %求解后的位移向量 也可以说是 当前的位移向量（对于有多步荷载的工况） 全自由度
         u1 double %有效自由度
+        du
+        du1
+        ddu 
+        ddu1
         K double%结构刚度矩阵 处理边界条件前
         M double
         C double
@@ -63,7 +68,8 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
             %初始化非线性
             for it=1:obj.f.manager_ele.num
                 e=obj.f.manager_ele.Get('index',it);
-                e.InitialKT();
+                e.InitialState();
+%                 e.InitialKT();
             end
             %检查边界条件是否重复
             obj.bc.Check();
@@ -142,6 +148,46 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
             obj.K1=obj.K(obj.activeindex,obj.activeindex);
             obj.M1=obj.M(obj.activeindex,obj.activeindex);
             obj.f_node1=obj.f_node(obj.activeindex);
+            
+            %初始化速度 加速度
+            obj.du=zeros(obj.dof,1);
+            obj.du1=zeros(length(obj.activeindex),1);
+            obj.ddu=zeros(obj.dof,1);
+            obj.ddu1=zeros(length(obj.activeindex),1);
+        end
+        function SetState(obj,varargin)%设置结构状态 有效自由度
+            %v 
+            %v dv ddv 
+            switch length(varargin)
+                case 1%只有位移
+                    v=varargin{1};
+                    dv=zeros(length(obj.dof),1);
+                    ddv=dv;
+                case 3%有位移 速度加速度
+                    v=varargin{1};
+                    dv=varargin{2};
+                    ddv=varargin{3};
+                otherwise
+                    error('sd')
+                    
+            end
+            
+            %更新自己lc的节点状态
+            obj.u1=v;
+            obj.du1=dv;
+            obj.ddu1=ddv;
+            obj.u(obj.activeindex)=v;
+            obj.du(obj.activeindex)=dv;
+            obj.ddu(obj.activeindex)=ddv;
+            
+            %更新单元状态和lc的f_ele
+            obj.f_ele=zeros(obj.dof,1);
+            for it=1:obj.f.manager_ele.num
+                e=obj.f.manager_ele.Get('index',it);
+                e.SetState(obj);
+                obj.f_ele=e.FormVector(obj.f_ele,e.Fs_elastic+e.Fsel);%组装节点对单元的力
+            end
+            
         end
     end
     methods(Abstract)

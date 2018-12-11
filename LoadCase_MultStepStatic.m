@@ -35,11 +35,9 @@ classdef LoadCase_MultStepStatic<LoadCase_Static
                 for stepn=1:length(obj.tn)
                     u1=obj.K1\(obj.f_node1*obj.scale(stepn));
                     %处理求解后所有自由度上的力和位移
-                    u=obj.u_beforesolve;
-                    u(obj.activeindex)=u1;
-                    f=obj.K*u;
+                    obj.SetState(u1);
                     %把结果保存到noderst
-                    obj.rst.AddTime(obj.tn(stepn),f,u);
+                    obj.rst.AddByState(obj.tn(stepn),'time');
                 end
                 %初始化结果指针
                 obj.rst.SetPointer();
@@ -48,12 +46,10 @@ classdef LoadCase_MultStepStatic<LoadCase_Static
                 f_node_origin=obj.f_node1;
                 for stepn=1:length(obj.tn)
                     obj.f_node1=f_node_origin*obj.scale(stepn);%改变外荷载
-                    u_all=obj.Script_NR(obj,obj.f_node1);
-                    obj.u=u_all;
-                    %计算弹性部分力
-                    f=obj.K*obj.u;
+                    u_all=obj.Script_NR(obj,obj.f_node1);        
+                    obj.SetState(u_all(obj.activeindex));
                     %添加结果
-                    obj.rst.AddTime(obj.tn(stepn),f,obj.u);
+                    obj.rst.AddByState(obj.tn(stepn),'time');
                     
                 end
                 %初始化结果指针

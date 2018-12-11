@@ -16,7 +16,8 @@ classdef Result_Modal<Result
             %通过圆频率 和 规格化的阵型
             
             obj.periodinfo.Add(order,[2*pi/w w/2/pi w]);%周期 时间频率 圆频率
-            obj.AddTime(order,vector_f,vectro_u);
+            obj.AddByState(order,'time');
+%             obj.AddTime(order,vector_f,vectro_u);
 
         end
         function SetPointer(obj,order)

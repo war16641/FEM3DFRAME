@@ -11,11 +11,17 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
         Mel double%单元质量矩阵
         Mel_ double
         KTel%非线性结构刚度矩阵
+        KTel_
         Fsel%非线性的回复力
+        Fsel_
+        Fs_elastic%弹性回复力
+        Fs_elastic_
         C66 double %坐标转换矩阵 针对单个节点的
         hitbyele double%自由度是否被单元击中  有些单元的自由度并未激活 如桁架单元 有杆端弯矩释放的梁单元 格式为节点个数*6
         flag_nl%标识这个单元是否是非线性默 认是线性的0
         arg%计算中间量
+        
+        state%单元状态 （变形 节点力 能量） 由loadcase的setstate操作 可用于后处理
     end
     
     methods
@@ -44,6 +50,13 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
             %初始化有效自由度矩阵
             obj.hitbyele=zeros(length(obj.nds),6);
             obj.Mel=zeros(6*length(nds),6*length(nds));%默认质量矩阵为零
+            %初始化单元状态
+            obj.state.deform_=zeros(1,6);%局部坐标变形
+            obj.state.force_=zeros(length(obj.nds)*6,1);%节点对单元的力 局部坐标
+            obj.state.eng=[0 0 0];%势能 动能 滞回耗能
+            
+            obj.Fs_elastic=zeros(length(obj.nds)*6,1);
+            obj.Fs_elastic_=zeros(length(obj.nds)*6,1);
 
         end
         function set.flag_nl(obj,v)
@@ -85,6 +98,18 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
                 vec_i(6*it-5:6*it)=v(xh:xh+5);
             end
         end
+        function [v,dv,ddv]=GetMyNodeState(obj,lc)%从lc的节点状态中获取单元的节点位移 速度 加速度向量 总体坐标
+            v=zeros(6*length(obj.nds),1);
+            dv=v;
+            ddv=v;
+            for it=1:length(obj.nds)
+                ndid=obj.nds(it);
+                xh=obj.f.node.GetXuhaoByID(ndid);%得到 节点号对应于刚度矩阵的序号
+                v(6*it-5:6*it)=lc.u(xh:xh+5);
+                dv(6*it-5:6*it)=lc.du(xh:xh+5);
+                ddv(6*it-5:6*it)=lc.ddu(xh:xh+5);
+            end
+        end
         function CalcHitbyele(obj)%计算自由度是否被单元击中
             %请在计算了弹性刚度矩阵Kel和KTel后调用这个函数
             %问题：如果kel没有某个自由度的刚度，而ktel在开始时也没刚度但是后面会产生刚度
@@ -109,6 +134,53 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
             end
             
         end
+        function SetState(obj,varargin)%设置单元的状态
+            %lc
+            
+            varargin=Hull(varargin);
+            lc=varargin{1};
+            [v,dv,ddv]=obj.GetMyNodeState(lc);
+            if length(obj.nds)==1%单节点单元
+                obj.state.deform_=[0 0 0 0 0 0];%无变形
+                obj.state.force_=[0 0 0 0 0 0];%无节点对单元的力
+                obj.state.eng([1 3])=0;
+                obj.state.eng(2)=0.5*dv'*obj.Mel*dv;%有动能
+            elseif length(obj.nds)==2%两节点单元
+                %计算变形
+                ui=v(1:6);
+                uj=v(7:12);%两节点位移 总体坐标
+                deform_global=uj-ui;%整体坐标系下的变形
+                cli=obj.C66^-1;
+                C=[obj.C66 zeros(6,6);zeros(6,6) obj.C66 ];
+                Cli=C^-1;
+                tmp=deform_global'*cli;
+%                 delta=obj.state.deform_-tmp;%变形的增量
+                obj.state.deform_=tmp;%局部坐标下的变形
+                
+                %计算弹性力
+                tmp=obj.Kel*v;%整体坐标下的力
+                obj.Fs_elastic=tmp;
+                tmp=tmp'*Cli;
+                obj.Fs_elastic_=tmp;
+                obj.state.force_=[tmp(1:6);tmp(7:12)];
+                
+                %计算能量
+                obj.state.eng(1)=0.5*v'*obj.Kel*v;
+                obj.state.eng(2)=0.5*dv'*obj.Mel*dv;%有动能
+                obj.state.eng(3)=0;
+            else
+                error('sd')
+            end
+        end
+        function InitialState(obj)%初始化单元状态 非线性状态也会初始化
+            obj.state.deform_=zeros(1,6);%局部坐标变形
+            obj.state.force_=zeros(length(obj.nds)*6,1);%节点对单元的力 局部坐标
+            obj.state.eng=[0 0 0];%势能 动能 滞回耗能
+            obj.Fs_elastic=zeros(length(obj.nds)*6,1);
+            obj.Fs_elastic_=zeros(length(obj.nds)*6,1);
+            obj.Fsel=zeros(length(obj.nds)*6,1);
+            obj.Fsel_=zeros(length(obj.nds)*6,1);
+        end
     end
     methods(Abstract)
         Kel = GetKel(obj)%形成自己的单元矩阵
@@ -117,6 +189,7 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
         M=FormM(obj,M)
         InitialKT(obj)%初始化KTel Fsel
         [force,deform]=GetEleResult(obj,varargin)%根据结果计算单元的力和变形 force是单元内部力（局部坐标系下,节点对单元的力） deform是单元变形（局部坐标） 
+        
     end
 end
 

@@ -85,6 +85,27 @@ classdef EleResultFrame<handle
                     error('matlab:myerror','未知类型。')
             end
         end
+        function LoadFromState(obj)
+            lc=obj.rf.rst.lc;
+            for it=1:lc.f.manager_ele.num
+                [e,eleid]=lc.f.manager_ele.Get('index',it);%获取单元id
+                obj.force.Add(eleid,e.state.force_);
+                obj.deform.Add(eleid,e.state.deform_);
+                obj.eng.Add(eleid,e.state.eng);
+                obj.rf.engrst=obj.rf.engrst+e.state.eng;%更新结构的总能量
+%                 if length(e.nds)==1%单节点单元
+%                     obj.force.Add(eleid,zeros(6,1));
+%                     obj.deform.Add(eleid,zeros(6,1));
+%                     obj.eng.Add(eleid,e.state.eng);
+%                 elseif length(e.nds)==2%双节点单元
+%                     obj.force.Add(eleid,e.state.force_);
+%                     obj.deform.Add(eleid,e.state.deform_);
+%                     obj.eng.Add(eleid,e.state.eng);
+%                 else
+%                     error('sd');
+%                 end
+            end
+        end
     end
     methods(Static)
         function freedom=FreedomInterpreter(x)%自由度解释器

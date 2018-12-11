@@ -17,8 +17,8 @@ classdef ResultFrame<handle
             obj.engrst=[0 0 0];
             obj.ndrst=NodeResultFrame(obj);
             obj.elerst=EleResultFrame(obj);
-            obj.ndrst.Make(varargin);
-            obj.elerst.Make();
+%             obj.ndrst.Make(varargin);
+%             obj.elerst.Make();
             
         end
         function r=Get(obj,varargin)
@@ -45,6 +45,10 @@ classdef ResultFrame<handle
                      error('sd')
              end
         end 
+        function LoadFromState(obj)%´ÓlcÖÐÔØÈë
+            obj.ndrst.LoadFromState();
+            obj.elerst.LoadFromState();
+        end
         
 
     end
