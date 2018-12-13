@@ -677,8 +677,8 @@ lc.rst.SetPointer(2);
 testcase.verifyTrue(norm(t(3)-w2)<0.001,'验证错误');
 
 end
-function test_verifymodel_20(testcase)
-%测试 地震工况 三自由度
+function test_verifymodel_20(testcase)%测试 地震工况 三自由度
+
 
 f=FEM3DFRAME();
 f.node.AddByCartesian(1,0,0,0);

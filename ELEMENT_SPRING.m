@@ -306,7 +306,6 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
         function SetState(obj,varargin)%更新单元状态
             %lc
             
-            %计算变形
             lc=varargin{1};
             [v,dv,ddv]=obj.GetMyNodeState(lc);
             ui=v(1:6);
@@ -314,17 +313,31 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
             deform_global=uj-ui;%整体坐标系下的变形
             cli=obj.C66^-1;
             C=[obj.C66 zeros(6,6);zeros(6,6) obj.C66 ];
-            Cli=C^-1;
             tmp=deform_global'*cli;
             delta=tmp-obj.state.deform_;%变形的增量
-            obj.state.deform_=tmp;%局部坐标下的变形
+            SetState@ELEMENT3DFRAME(obj,varargin);%先计算弹性的部分 
             
-            %计算弹性力
-            tmp=obj.Kel*v;%整体坐标下的力
-            tmp=tmp'*Cli;
-            fs_e=tmp';%局部坐标下
+%             %计算变形
+%             lc=varargin{1};
+%             [v,dv,ddv]=obj.GetMyNodeState(lc);
+%             ui=v(1:6);
+%             uj=v(7:12);%两节点位移 总体坐标
+%             deform_global=uj-ui;%整体坐标系下的变形
+%             cli=obj.C66^-1;
+%             C=[obj.C66 zeros(6,6);zeros(6,6) obj.C66 ];
+%             Cli=C^-1;
+%             tmp=deform_global'*cli;
+%             delta=tmp-obj.state.deform_;%变形的增量
+%             obj.state.deform_=tmp;%局部坐标下的变形
+%             
+%             %计算弹性力
+%             tmp=obj.Kel*v;%整体坐标下的力
+%             obj.Fs_elastic=tmp;
+%             tmp=tmp'*Cli;
+%             fs_e=tmp';%局部坐标下
             
             %计算非线弹性的回复力
+
             Fs=zeros(12,1);
             KT=zeros(12,12);
             for it=1:length(obj.dir_nl)
@@ -368,13 +381,13 @@ classdef ELEMENT_SPRING<ELEMENT3DFRAME
             obj.Fsel=tmp';
             
             %合并两个力
-            tmp=fs_e+obj.Fsel_;
+            tmp=obj.Fs_elastic_+obj.Fsel_;
             obj.state.force_=[tmp(1:6)';tmp(7:12)'];
             
-            %计算能量
-            obj.state.eng(1)=0.5*v'*obj.Kel*v;
-            obj.state.eng(2)=0;
-            obj.state.eng(3)=0;
+%             %计算能量
+%             obj.state.eng(1)=0.5*v'*obj.Kel*v;
+%             obj.state.eng(2)=0;
+%             obj.state.eng(3)=0;
             
         end
         function InitialState(obj)

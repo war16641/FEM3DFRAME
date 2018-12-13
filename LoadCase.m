@@ -15,6 +15,7 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         f_node double%节点力 由f_ext+df组成
         f_node1 double
         f_ele%节点受单元的力 全自由度
+        f_ele1
         u_beforesolve double%求解前的位移向量（全自由度的） 保存位移荷载
         u double %求解后的位移向量 也可以说是 当前的位移向量（对于有多步荷载的工况） 全自由度
         u1 double %有效自由度
@@ -28,6 +29,9 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
         K1 double%引入边界条件
         M1
         C1
+        
+        K_inelastic double%当前结构的的非线部分的刚度
+        K1_inelastic double
         
     end
     
@@ -187,6 +191,24 @@ classdef LoadCase<handle & matlab.mixin.Heterogeneous
                 e.SetState(obj);
                 obj.f_ele=e.FormVector(obj.f_ele,e.Fs_elastic+e.Fsel);%组装节点对单元的力
             end
+            obj.f_ele1=obj.f_ele(obj.activeindex);
+            
+        end
+        function SetState_VelAcc(obj,dv,ddv)%补充结构的速度 加速度
+            %这个函数很突兀 主要是中心差分法的位移是先求出来的 没办法 速度和加速度只能补
+            
+            %更新自己lc的节点状态
+            obj.du1=dv;
+            obj.ddu1=ddv;
+            obj.du(obj.activeindex)=dv;
+            obj.ddu(obj.activeindex)=ddv;
+            
+            %更新单元状态 主要是单元的动能
+            for it=1:obj.f.manager_ele.num
+                e=obj.f.manager_ele.Get('index',it);
+                e.SetState_VelAcc(obj);
+            end
+            
             
         end
     end

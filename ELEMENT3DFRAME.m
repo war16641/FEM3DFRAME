@@ -161,11 +161,23 @@ classdef ELEMENT3DFRAME <handle & matlab.mixin.Heterogeneous
                 tmp=obj.Kel*v;%整体坐标下的力
                 obj.Fs_elastic=tmp;
                 tmp=tmp'*Cli;
-                obj.Fs_elastic_=tmp;
+                obj.Fs_elastic_=tmp';
                 obj.state.force_=[tmp(1:6);tmp(7:12)];
                 
                 %计算能量
                 obj.state.eng(1)=0.5*v'*obj.Kel*v;
+                obj.state.eng(2)=0.5*dv'*obj.Mel*dv;%有动能
+                obj.state.eng(3)=0;
+            else
+                error('sd')
+            end
+        end
+        function SetState_VelAcc(obj,lc)%由lc的SetState_VelAcc调用
+            [~,dv,~]=obj.GetMyNodeState(lc);
+            if length(obj.nds)==1%单节点单元
+                obj.state.eng([1 3])=0;
+                obj.state.eng(2)=0.5*dv'*obj.Mel*dv;%有动能
+            elseif length(obj.nds)==2%两节点单元
                 obj.state.eng(2)=0.5*dv'*obj.Mel*dv;%有动能
                 obj.state.eng(3)=0;
             else
