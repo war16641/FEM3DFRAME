@@ -535,9 +535,9 @@ classdef LoadCase_Earthquake<LoadCase
                 %写入结果
                 
 %                 obj.SetState(v(:,it),dv(:,it),ddv(:,it));
-                obj.SetState_VelAcc(dv(:,it),ddv(:,it));
+                obj.SetState_VelAcc(dv(:,it),ddv(:,it));%补充速度和加速度结果
                 obj.rst.AddByState(time(it),'time');
-                obj.SetState(v(:,it+1));
+                obj.SetState(v(:,it+1));%先仅写入位移结果
             end
             
             
