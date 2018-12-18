@@ -1,10 +1,7 @@
 %runtests('AllocTest.m')
 %r = runperf('AllocTest')
 classdef AllocTest < matlab.perftest.TestCase   % 性能测试的公共父类
-    properties
-        rows = 1000
-        cols = 1000
-    end
+
     methods(Test)
         
         function test1(testcase)
@@ -1438,7 +1435,66 @@ classdef AllocTest < matlab.perftest.TestCase   % 性能测试的公共父类
             err=norm(r1-r1_tar);
             testcase.verifyTrue(err<0.001,'验证错误');
         end
-        
+        function test_verifymodel_32(testcase) %测试 地震工况 三自由度 非线性spring
+           
+            
+            f=FEM3DFRAME();
+            f.node.AddByCartesian(1,0,0,0);
+            f.node.AddByCartesian(2,1,0,0);
+            f.node.AddByCartesian(3,2,0,0);
+            f.node.AddByCartesian(4,3,0,0);
+            m=267e3;
+            
+            tmp=ELEMENT_MASS(f,0,2,[m m m 0 0 0]);
+            f.manager_ele.Add(tmp);
+            tmp=ELEMENT_MASS(f,0,3,[m m m 0 0 0]);
+            f.manager_ele.Add(tmp);
+            tmp=ELEMENT_MASS(f,0,4,[m m m 0 0 0]);
+            f.manager_ele.Add(tmp);
+            
+            k1=1.75e9;k2=k1*0.1;fy=k1*1e-4;
+            tmp=ELEMENT_SPRING(f,0,[1 2],[k1 0 0 0 0 0]);
+            tmp.SetNLProperty(1,[k1 fy k2]);
+            f.manager_ele.Add(tmp);
+            tmp=ELEMENT_SPRING(f,0,[2 3],[k1 0 0 0 0 0]);
+            tmp.SetNLProperty(1,[k1 fy k2]);
+            f.manager_ele.Add(tmp);
+            tmp=ELEMENT_SPRING(f,0,[3 4],[k1 0 0 0 0 0]);
+            tmp.SetNLProperty(1,[k1 fy k2]);
+            f.manager_ele.Add(tmp);
+            
+            
+            
+            
+            
+            lc=LoadCase_Earthquake(f,'eq');
+            f.manager_lc.Add(lc);
+            lc.AddBC('displ',[1 1 0;1 2 0;1 3 0;1 4 0;1 5 0;1 6 0]);
+            
+            % ew=EarthquakWave();
+            % ew.LoadFromFile('landers','g','F:\TOB\地震波\Landers.txt','time&acc',0);
+            
+            dt=load('wjj.mat','dz');
+            dt=dt.dz;
+            ew=EarthquakWave(dt(:,1),dt(:,2),'m/s^2','dz');
+            ei=EarthquakeInput(lc,'landers',ew,1,0);
+            lc.AddEarthquakeInput(ei);
+            lc.SetAlgorithm('central');
+            C1=[
+                2.6955e+006  -962.0010e+003     0.0000e+000
+                -962.0010e+003     2.6955e+006  -962.0010e+003
+                0.0000e+000  -962.0010e+003     1.7335e+006];
+            
+            lc.damp.Set('matrix',C1);
+            lc.Solve();
+            [u3,tn]=lc.rst.GetTimeHistory(0,40,'node','displ',2,1);
+            figure
+            plot(tn,u3)
+            r=max(u3);
+            testcase.verifyTrue(norm(r-0.0037219)<0.001,'验证错误');
+            
+            
+        end
         
     end
 end
